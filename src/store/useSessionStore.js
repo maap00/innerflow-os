@@ -11,12 +11,13 @@ export const useSessionStore = create((set, get) => ({
   streak: 0,
   habits: [],
   selectedHabitId: null,
+  points: 0,
 
   // ------------------------
   // SESSION LOGIC
   // ------------------------
 
-    startSession: (habitId) =>
+  startSession: (habitId) =>
     set((state) => {
         const habit = state.habits.find((h) => h.id === habitId);
 
@@ -26,7 +27,7 @@ export const useSessionStore = create((set, get) => ({
             duration: 0,
             active: true,
             habitId,
-             targetSeconds: habit?.targetSeconds || null,
+            targetSeconds: habit?.targetSeconds || null,
             completed: false,
         },
         };
@@ -98,6 +99,8 @@ export const useSessionStore = create((set, get) => ({
         };
       });
 
+      
+
       // ------------------------
       // STREAK LOGIC
       // ------------------------
@@ -116,19 +119,52 @@ export const useSessionStore = create((set, get) => ({
       }
 
       // ------------------------
+      // PUNTOS
+      // ------------------------
+
+      const earnedPoints = Math.floor(duration / 60);
+      const newPoints = state.points + earnedPoints;
+
+      // ------------------------
       // PERSISTENCIA
       // ------------------------
       saveData("sessions", updatedSessions);
       saveData("streak", newStreak);
       saveData("habits", updatedHabits);
+      saveData("points", newPoints);
 
       return {
         sessions: updatedSessions,
         currentSession: null,
         streak: newStreak,
         habits: updatedHabits,
+        points: newPoints,
 
       };
+    }),
+
+    pauseSession: () =>
+        set((state) => {
+            if (!state.currentSession) return {};
+
+            return {
+            currentSession: {
+                ...state.currentSession,
+                active: false,
+            },
+            };
+        }),
+
+    resumeSession: () =>
+        set((state) => {
+            if (!state.currentSession) return {};
+
+            return {
+            currentSession: {
+                ...state.currentSession,
+                active: true,
+            },
+            };
     }),
 
   tick: () =>
@@ -151,6 +187,16 @@ export const useSessionStore = create((set, get) => ({
     };
   }),
 
+  resetSessions: () => {
+    saveData("sessions", []);
+    saveData("streak", 0);
+
+    set({
+        sessions: [],
+        streak: 0,
+    });
+    },
+
   // ------------------------
   // LOAD DATA
   // ------------------------
@@ -164,6 +210,12 @@ export const useSessionStore = create((set, get) => ({
     const data = await loadData("streak");
     if (data) set({ streak: data });
   },
+
+   loadPoints: async () => {
+        const data = await loadData("points");
+        if (data) set({ points: data });
+    },
+
 
   // ------------------------
   // HABITS
@@ -208,5 +260,6 @@ export const useSessionStore = create((set, get) => ({
 
   selectHabit: (habitId) => set({ selectedHabitId: habitId }),
 
+ 
 
 }));
