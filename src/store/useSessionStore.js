@@ -1,265 +1,286 @@
 import { create } from "zustand";
-import { saveData, loadData } from "../helpers/storage";
-import { isSameDay, isYesterday } from "../helpers/date";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLevelData } from "../helpers/level";
 
+// =========================
+// ⚙️ CONFIG VALIDACIÓN
+// =========================
+const MIN_VALID_SECONDS = 60;
+const MIN_PROGRESS_RATIO = 0.6;
+
+// =========================
+// 💾 HELPERS STORAGE
+// =========================
+const saveData = async (key, data) => {
+  await AsyncStorage.setItem(key, JSON.stringify(data));
+};
+
+const loadData = async (key) => {
+  const data = await AsyncStorage.getItem(key);
+  return data ? JSON.parse(data) : null;
+};
+
+// =========================
+// 🧠 STORE
+// =========================
 export const useSessionStore = create((set, get) => ({
-  // ------------------------
-  // STATE
-  // ------------------------
+  // =========================
+  // 📊 STATE
+  // =========================
   sessions: [],
   currentSession: null,
-  streak: 0,
   habits: [],
   selectedHabitId: null,
+  streak: 0,
   points: 0,
+  balance: 0,
 
-  // ------------------------
-  // SESSION LOGIC
-  // ------------------------
+  // =========================
+  // 🔄 LOAD
+  // =========================
+  loadInitialData: async () => {
+    const sessions = await loadData("sessions");
+    const habits = await loadData("habits");
+    const streak = await loadData("streak");
+    const points = await loadData("points");
 
-  startSession: (habitId) =>
+    set({
+      sessions: sessions || [],
+      habits: habits || [],
+      streak: streak || 0,
+      points: points || 0,
+      balance: balance || 0,
+    });
+  },
+
+  // =========================
+  // 🎯 HABITS
+  // =========================
+  addHabit: (name, targetMinutes) =>
     set((state) => {
-        const habit = state.habits.find((h) => h.id === habitId);
+      const newHabit = {
+        id: Date.now().toString(),
+        name,
+        targetSeconds: targetMinutes * 60,
+        streak: 0,
+      };
 
-        return {
-        currentSession: {
-            startTime: Date.now(),
-            duration: 0,
-            active: true,
-            habitId,
-            targetSeconds: habit?.targetSeconds || null,
-            completed: false,
-        },
-        };
+      const updated = [...state.habits, newHabit];
+      saveData("habits", updated);
+
+      return { habits: updated };
     }),
 
-  stopSession: () =>
+  removeHabit: (id) =>
+    set((state) => {
+      const updated = state.habits.filter((h) => h.id !== id);
+      saveData("habits", updated);
+      return { habits: updated };
+    }),
+
+  selectHabit: (id) => set({ selectedHabitId: id }),
+
+  // =========================
+  // ⏱️ SESSION CONTROL
+  // =========================
+  startSession: (habitId) =>
+    set((state) => {
+      const habit = state.habits.find((h) => h.id === habitId);
+
+      return {
+        currentSession: {
+          startTime: Date.now(),
+          duration: 0,
+          active: true,
+          habitId,
+          targetSeconds: habit?.targetSeconds || null,
+          completed: false,
+        },
+      };
+    }),
+
+  pauseSession: () =>
     set((state) => {
       if (!state.currentSession) return {};
+      return {
+        currentSession: {
+          ...state.currentSession,
+          active: false,
+        },
+      };
+    }),
+
+  resumeSession: () =>
+    set((state) => {
+      if (!state.currentSession) return {};
+      return {
+        currentSession: {
+          ...state.currentSession,
+          active: true,
+        },
+      };
+    }),
+
+  tick: () =>
+    set((state) => {
+      if (!state.currentSession?.active) return {};
+
+      const newDuration = state.currentSession.duration + 1;
+      const target = state.currentSession.targetSeconds;
+
+      const isCompleted = target && newDuration >= target;
+
+      return {
+        currentSession: {
+          ...state.currentSession,
+          duration: newDuration,
+          completed: isCompleted,
+        },
+      };
+    }),
+
+  // =========================
+  // 🛑 STOP SESSION
+  // =========================
+  stopSession: () =>
+    set((state) => {
+      const session = state.currentSession;
+      if (!session) return {};
 
       const endTime = Date.now();
+      const duration = session.duration;
+      const target = session.targetSeconds;
 
-      const duration = Math.floor(
-        (endTime - state.currentSession.startTime) / 1000
-      );
+      // =========================
+      // 🧠 VALIDACIÓN ANTI-TRAMPA
+      // =========================
+      const meetsMinDuration = duration >= MIN_VALID_SECONDS;
 
+      const meetsProgress = target
+        ? duration / target >= MIN_PROGRESS_RATIO
+        : true;
+
+      const isValidSession =
+        meetsMinDuration && meetsProgress;
+
+      // =========================
+      // 🧾 SESSION FINAL
+      // =========================
       const newSession = {
-        ...state.currentSession,
-        duration,
+        ...session,
         endTime,
-        habitId: state.currentSession.habitId,
+        duration,
+        isValid: isValidSession,
       };
 
       const updatedSessions = [...state.sessions, newSession];
 
-      const today = new Date().toDateString();
+      const newBalance = state.balance + earnedPoints;
 
-      const updatedHabits = state.habits.map((h) => {
-        // solo afecta al hábito de la sesión
-        if (h.id !== newSession.habitId) return h;
+      // =========================
+      // 🔥 STREAK GLOBAL
+      // =========================
+      let newStreak = state.streak;
 
-        // calcular progreso del día para este hábito
-        const todayProgress = updatedSessions
-            .filter(
-            (s) =>
-                s.habitId === h.id &&
-                new Date(s.endTime).toDateString() === today
-            )
-            .reduce((acc, s) => acc + s.duration, 0);
+      if (isValidSession) {
+        const today = new Date().toDateString();
+        const lastSession = state.sessions[state.sessions.length - 1];
 
-        const completed = todayProgress >= h.targetSeconds;
+        if (lastSession) {
+          const lastDay = new Date(lastSession.endTime).toDateString();
 
-        if (!completed) return h;
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-
-        let newStreak = h.streak;
-
-        if (!h.lastCompletedDate) {
-            newStreak = 1;
-        } else if (
-            new Date(h.lastCompletedDate).toDateString() === today
-        ) {
-            // ya contó hoy
-            newStreak = h.streak;
-        } else if (
-            new Date(h.lastCompletedDate).toDateString() ===
-            yesterday.toDateString()
-        ) {
-            newStreak = h.streak + 1;
+          if (lastDay !== today) {
+            newStreak += 1;
+          }
         } else {
-            newStreak = 1;
+          newStreak = 1;
         }
+      }
+
+      // =========================
+      // 🔥 STREAK POR HÁBITO
+      // =========================
+      const updatedHabits = state.habits.map((h) => {
+        if (h.id !== session.habitId) return h;
+
+        const completed =
+          isValidSession &&
+          target &&
+          duration >= target;
 
         return {
-            ...h,
-            streak: newStreak,
-            lastCompletedDate: today,
+          ...h,
+          streak: completed ? h.streak + 1 : h.streak,
         };
       });
 
-      
+      // =========================
+      // 💰 PUNTOS
+      // =========================
+      const earnedPoints = isValidSession
+        ? Math.floor(duration / 60)
+        : 0;
 
-      // ------------------------
-      // STREAK LOGIC
-      // ------------------------
-      let newStreak = state.streak;
-
-      const lastSession = state.sessions[state.sessions.length - 1];
-
-      if (!lastSession) {
-        newStreak = 1;
-      } else if (isSameDay(lastSession.endTime, endTime)) {
-        newStreak = state.streak;
-      } else if (isYesterday(lastSession.endTime)) {
-        newStreak = state.streak + 1;
-      } else {
-        newStreak = 1;
-      }
-
-      // ------------------------
-      // PUNTOS
-      // ------------------------
-
-      const earnedPoints = Math.floor(duration / 60);
       const newPoints = state.points + earnedPoints;
 
-      // ------------------------
-      // PERSISTENCIA
-      // ------------------------
+      // =========================
+      // 💾 PERSISTENCIA
+      // =========================
       saveData("sessions", updatedSessions);
-      saveData("streak", newStreak);
       saveData("habits", updatedHabits);
+      saveData("streak", newStreak);
       saveData("points", newPoints);
+      saveData("balance", newBalance);
 
       return {
         sessions: updatedSessions,
         currentSession: null,
-        streak: newStreak,
         habits: updatedHabits,
+        streak: newStreak,
         points: newPoints,
-
+        balance: newBalance,
       };
     }),
-
-    pauseSession: () =>
-        set((state) => {
-            if (!state.currentSession) return {};
-
-            return {
-            currentSession: {
-                ...state.currentSession,
-                active: false,
-            },
-            };
-        }),
-
-    resumeSession: () =>
-        set((state) => {
-            if (!state.currentSession) return {};
-
-            return {
-            currentSession: {
-                ...state.currentSession,
-                active: true,
-            },
-            };
-    }),
-
-  tick: () =>
-  set((state) => {
-    if (!state.currentSession?.active) return {};
-
-    const newDuration = state.currentSession.duration + 1;
-
-    const target = state.currentSession.targetSeconds;
-
-    const isCompleted =
-      target && newDuration >= target;
-
-    return {
-      currentSession: {
-        ...state.currentSession,
-        duration: newDuration,
-        completed: isCompleted,
-      },
-    };
-  }),
-
+    
+ // =========================
+  // 🆕 SISTEMA DE NIVELES
+  // =========================
+  getLevel: () => {
+    const { points } = get();
+    return getLevelData(points);
+  },
+  // =========================
+  // 🧹 RESET
+  // =========================
   resetSessions: () => {
     saveData("sessions", []);
     saveData("streak", 0);
 
     set({
-        sessions: [],
-        streak: 0,
+      sessions: [],
+      streak: 0,
     });
-    },
-
-  // ------------------------
-  // LOAD DATA
-  // ------------------------
-
-  loadSessions: async () => {
-    const data = await loadData("sessions");
-    if (data) set({ sessions: data });
   },
 
-  loadStreak: async () => {
-    const data = await loadData("streak");
-    if (data) set({ streak: data });
-  },
+   // =========================
+  // REWARDS
+  // =========================
 
-   loadPoints: async () => {
-        const data = await loadData("points");
-        if (data) set({ points: data });
-    },
-
-
-  // ------------------------
-  // HABITS
-  // ------------------------
-
-  addHabit: (name, targetMinutes) =>
-    set((state) => {
-      const newHabit = {
-        id: Date.now(),
-        name,
-        targetSeconds: targetMinutes * 60,
-        createdAt: Date.now(),
-        streak: 0,
-        lastCompletedDate: null,
-      };
-
-      const updatedHabits = [...state.habits, newHabit];
-
-      saveData("habits", updatedHabits);
-
-      return {
-        habits: updatedHabits,
-      };
-    }),
-
-  loadHabits: async () => {
-    const data = await loadData("habits");
-    if (data) set({ habits: data });
-  },
-
-  removeHabit: (id) =>
+  redeemReward: (reward) =>
   set((state) => {
-    const updatedHabits = state.habits.filter((h) => h.id !== id);
+    if (state.balance < reward.cost) {
+      alert("No tenés puntos suficientes");
+      return {};
+    }
 
-    saveData("habits", updatedHabits);
+    const newBalance = state.balance - reward.cost;
+
+    saveData("balance", newBalance);
+
+    alert(`Canjeaste: ${reward.title}`);
 
     return {
-      habits: updatedHabits,
+      balance: newBalance,
     };
-     
   }),
-
-  selectHabit: (habitId) => set({ selectedHabitId: habitId }),
-
- 
-
 }));
