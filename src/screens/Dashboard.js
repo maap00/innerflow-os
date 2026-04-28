@@ -1,28 +1,35 @@
-import { View, Alert, ScrollView } from "react-native";
-import { Text } from "react-native-paper";
+import { View, Alert, ScrollView, Dimensions } from "react-native";
+import { Text, ProgressBar } from "react-native-paper";
 
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Timer from "../components/timer/Timer";
 import { useSessionStore } from "../store/useSessionStore";
 
-import { getTodayProgress } from "../helpers/habits";
 import { formatTime } from "../helpers/time";
-
-import { getHabitProgress } from "../helpers/habits";
+import { getHabitProgress, getTodayProgress } from "../helpers/habits";
 import { pluralizeDays } from "../helpers/date";
 import {
   groupSessionsByDay,
   sortSessionsDesc,
   formatDate,
 } from "../helpers/history";
-
 import {
   getTodayTotal,
   getTotalTargetToday,
 } from "../helpers/metrics";
 
-import { ProgressBar } from "react-native-paper";
+import {
+  getBestFocusHour,
+  getBestWeekday,
+  getAverageDailyMinutes,
+} from "../helpers/insights";
+
+import { BarChart } from "react-native-chart-kit";
+
+import { getLast7DaysFocus } from "../helpers/charts";
+
+import { getCoachMessage } from "../helpers/coach";
 
 export default function Dashboard({ navigation }) {
   const {
@@ -40,9 +47,11 @@ export default function Dashboard({ navigation }) {
   } = useSessionStore();
 
   const todayProgress = getTodayProgress(sessions);
+
   const sorted = sortSessionsDesc(sessions);
   const grouped = groupSessionsByDay(sorted);
   const days = Object.keys(grouped);
+
   const todayTotal = getTodayTotal(sessions);
   const totalTarget = getTotalTargetToday(habits);
 
@@ -51,31 +60,74 @@ export default function Dashboard({ navigation }) {
       ? Math.min((todayTotal / totalTarget) * 100, 100)
       : 0;
 
-  const getProgressColor = () => {
-    if (progressPercent >= 100) return "green";
-    if (progressPercent >= 50) return "orange";
-    return "red";
-  };
-
   const level = getLevel();
 
+  // =========================
+  // 🧠 LOOP DE RETENCIÓN
+  // =========================
+  const getRetentionMessage = () => {
+    if (streak >= 5) {
+      return "🔥 Gran racha. Hoy no la rompas.";
+    }
+
+    if (progressPercent >= 100) {
+      return "🎯 Día cumplido. Mañana seguimos más fuerte.";
+    }
+
+    if (progressPercent >= 70) {
+      return "⚡ Estás cerca de completar hoy.";
+    }
+
+    if (todayTotal === 0) {
+      return "🚀 Un bloque de foco puede cambiar tu día.";
+    }
+
+    return "⏱️ Cada minuto suma.";
+  };
+
+    const bestHour = getBestFocusHour(sessions);
+    const bestDay = getBestWeekday(sessions);
+    const avgMinutes = getAverageDailyMinutes(sessions);
+
+    const screenWidth = Dimensions.get("window").width - 40;
+
+    const chartData = getLast7DaysFocus(sessions);
+
+    const isPremium = false;
+
+    const coach = getCoachMessage({
+        sessions,
+        streak,
+        progressPercent,
+    });
+
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }} style={{ flex: 1, padding: 20 }}>
-      
-      <Text style={{ fontWeight: "bold", color: "#0D0F14" }} variant="headlineMedium">
+    <ScrollView
+      contentContainerStyle={{ padding: 16 }}
+      style={{ flex: 1, padding: 20 }}
+    >
+      <Text
+        style={{ fontWeight: "bold", color: "#0D0F14" }}
+        variant="headlineMedium"
+      >
         InnerFlow OS
       </Text>
 
       {/* =========================
-          📊 CARD PRINCIPAL (MEJORADO)
+          📊 CARD PRINCIPAL
       ========================= */}
       <Card style={{ marginBottom: 20, padding: 16 }}>
         <Text style={{ fontSize: 18, fontWeight: "bold" }}>
           📊 Hoy
         </Text>
 
+        {/* 🧠 MENSAJE RETENCIÓN */}
+        <Text style={{ marginTop: 8, marginBottom: 10 }}>
+          {getRetentionMessage()}
+        </Text>
+
         {/* ⏱️ Tiempo */}
-        <Text style={{ marginTop: 8 }}>
+        <Text>
           🔥 {formatTime(todayTotal)} de foco real
         </Text>
 
@@ -96,9 +148,21 @@ export default function Dashboard({ navigation }) {
           🔥 {streak} {pluralizeDays(streak)}
         </Text>
 
+        {/* 🧠 LOSS AVERSION */}
+        {streak >= 2 && (
+          <Text style={{ marginTop: 4 }}>
+            🛡️ Hoy protegés {streak} {pluralizeDays(streak)} de progreso
+          </Text>
+        )}
+
         {/* 💰 Economía */}
-        <Text>💰 {balance} pts disponibles</Text>
-        <Text>📊 {points} pts totales</Text>
+        <Text style={{ marginTop: 8 }}>
+          💰 {balance} pts disponibles
+        </Text>
+
+        <Text>
+          📊 {points} pts totales
+        </Text>
 
         {/* 🏆 Nivel */}
         <Text style={{ marginTop: 8 }}>
@@ -128,8 +192,97 @@ export default function Dashboard({ navigation }) {
         </Text>
       </Card>
 
+      <Card style={{ marginBottom: 20, padding: 16 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            🧠 Insights personales
+        </Text>
+
+        <Text style={{ marginTop: 8 }}>
+            ⏰ Mejor hora: {bestHour}:00 hs
+        </Text>
+
+        <Text>
+            📅 Mejor día: {bestDay}
+        </Text>
+
+        <Text>
+            📈 Promedio diario: {avgMinutes} min
+        </Text>
+
+        <Text style={{ marginTop: 10 }}>
+            Usá tus mejores horarios para tareas críticas.
+        </Text>
+    </Card>
+
+    <Card style={{ marginBottom: 20, padding: 16 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            🧠 InnerFlow Coach
+        </Text>
+
+        <Text style={{ marginTop: 10, fontWeight: "bold" }}>
+            {coach.title}
+        </Text>
+
+        <Text style={{ marginTop: 6 }}>
+            {coach.message}
+        </Text>
+    </Card>
+
+    <Card style={{ marginBottom: 20, padding: 16 }}>
+        <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            📈 Últimos 7 días
+        </Text>
+
+        <BarChart
+            data={{
+            labels: chartData.map((d) => d.label),
+            datasets: [
+                {
+                data: chartData.map((d) => d.minutes),
+                },
+            ],
+            }}
+            width={screenWidth}
+            height={220}
+            fromZero
+            yAxisLabel=""
+            chartConfig={{
+            decimalPlaces: 1,
+            backgroundGradientFrom: "#ffffff",
+            backgroundGradientTo: "#ffffff",
+            color: (opacity = 1) =>
+                `rgba(33, 150, 243, ${opacity})`,
+            labelColor: (opacity = 1) =>
+                `rgba(0,0,0,${opacity})`,
+            barPercentage: 0.7,
+            }}
+            style={{
+            marginTop: 10,
+            borderRadius: 12,
+            }}
+        />
+
+        <Text style={{ marginTop: 10 }}>
+            Minutos de foco por día
+        </Text>
+    </Card>
+
+    
+
+    {isPremium ? (
+        <AdvancedAnalytics />
+        ) : (
+        <Card>
+            <Text>🔒 Analytics avanzados disponibles en Premium</Text>
+
+            <Button>
+            Probar Premium
+            </Button>
+        </Card>
+        )}
+
       {/* =========================
-          🎯 HÁBITOS (mínimo ajuste UX)
+          🎯 HÁBITOS
       ========================= */}
       {habits.map((h) => {
         const isSelected = h.id === selectedHabitId;
@@ -170,7 +323,10 @@ export default function Dashboard({ navigation }) {
                   "¿Seguro que querés eliminarlo?",
                   [
                     { text: "Cancelar", style: "cancel" },
-                    { text: "Eliminar", onPress: () => removeHabit(h.id) },
+                    {
+                      text: "Eliminar",
+                      onPress: () => removeHabit(h.id),
+                    },
                   ]
                 )
               }
@@ -192,12 +348,19 @@ export default function Dashboard({ navigation }) {
 
         {days.map((day) => (
           <Card key={day} style={{ marginBottom: 16 }}>
-            <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+            <Text
+              style={{
+                fontWeight: "bold",
+                marginBottom: 8,
+              }}
+            >
               {formatDate(day)}
             </Text>
 
             {grouped[day].map((s, index) => {
-              const habit = habits.find((h) => h.id === s.habitId);
+              const habit = habits.find(
+                (h) => h.id === s.habitId
+              );
 
               return (
                 <Text key={index}>
