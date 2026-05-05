@@ -30,6 +30,8 @@ import { BarChart } from "react-native-chart-kit";
 import { getLast7DaysFocus } from "../helpers/charts";
 
 import { getCoachMessage } from "../helpers/coach";
+import HabitCard from "../components/habits/HabitCard";
+
 
 export default function Dashboard({ navigation }) {
   const {
@@ -44,6 +46,7 @@ export default function Dashboard({ navigation }) {
     points,
     getLevel,
     balance,
+    completeHabit
   } = useSessionStore();
 
   const todayProgress = getTodayProgress(sessions);
@@ -284,59 +287,20 @@ export default function Dashboard({ navigation }) {
       {/* =========================
           🎯 HÁBITOS
       ========================= */}
-      {habits.map((h) => {
-        const isSelected = h.id === selectedHabitId;
 
+        {habits.map((h) => {
         const progress = getHabitProgress(sessions, h.id);
-        const completed = progress >= h.targetSeconds;
 
         return (
-          <Card key={h.id}>
-            <Text>
-              🔥 {h.streak} {pluralizeDays(h.streak)} en este hábito
-            </Text>
-
-            <Text>{h.name}</Text>
-
-            <Text>
-              {formatTime(progress)} / {formatTime(h.targetSeconds)}
-            </Text>
-
-            <Text>
-              {completed
-                ? "✅ Completado hoy"
-                : "⏳ En progreso"}
-            </Text>
-
-            <Button
-              mode={isSelected ? "contained" : "outlined"}
-              onPress={() => selectHabit(h.id)}
-            >
-              {isSelected ? "Seleccionado" : "Seleccionar"}
-            </Button>
-
-            <Button
-              mode="outlined"
-              onPress={() =>
-                Alert.alert(
-                  "Eliminar hábito",
-                  "¿Seguro que querés eliminarlo?",
-                  [
-                    { text: "Cancelar", style: "cancel" },
-                    {
-                      text: "Eliminar",
-                      onPress: () => removeHabit(h.id),
-                    },
-                  ]
-                )
-              }
-              style={{ marginTop: 10 }}
-            >
-              Eliminar
-            </Button>
-          </Card>
+            <HabitCard
+            key={h.id}
+            habit={h}
+            progress={progress}
+            onSelect={() => selectHabit(h.id)}
+            onComplete={() => completeHabit(h.id)}
+            />
         );
-      })}
+        })}
 
       {/* =========================
           ⏱️ TIMER + HISTORIAL
@@ -396,6 +360,9 @@ export default function Dashboard({ navigation }) {
       {/* =========================
           ⚙️ ACCIONES
       ========================= */}
+      <Button onPress={() => navigation.navigate("CreateHabit")}>
+        + Nuevo hábito
+    </Button>
       <Button onPress={() => addHabit("Foco profundo", 1)}>
         Crear hábito 1 min
       </Button>

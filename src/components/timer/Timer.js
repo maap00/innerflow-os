@@ -16,9 +16,6 @@ export default function Timer() {
     selectedHabitId,
   } = useSessionStore();
 
-  // =========================
-  // ⏱️ TICK LOOP
-  // =========================
   useEffect(() => {
     let interval;
 
@@ -31,72 +28,15 @@ export default function Timer() {
     return () => clearInterval(interval);
   }, [currentSession?.active]);
 
-  // =========================
-  // 🎯 HÁBITO ACTIVO
-  // =========================
   const selectedHabit = habits.find(
     (h) => h.id === selectedHabitId
   );
 
-  // =========================
-  // 🧠 FEEDBACK EMOCIONAL
-  // =========================
-  const getSessionFeedback = (duration, target) => {
-    const minutes = Math.floor(duration / 60);
-
-    if (duration < 60) {
-      return {
-        title: "⚠️ Muy corto",
-        message: "Intentá sostener al menos 1 minuto de foco.",
-      };
-    }
-
-    if (target && duration >= target) {
-      return {
-        title: "🎯 Objetivo logrado",
-        message: `Excelente. Completaste ${minutes} min de foco.`,
-      };
-    }
-
-    if (minutes >= 10) {
-      return {
-        title: "🔥 Buen progreso",
-        message: `${minutes} min reales. Esto construye disciplina.`,
-      };
-    }
-
-    return {
-      title: "✅ Sesión válida",
-      message: `${minutes} min sumados.`,
-    };
-  };
-
-  // =========================
-  // 🛑 STOP HANDLER
-  // =========================
-  const handleStop = () => {
-    const duration = currentSession?.duration || 0;
-    const target = currentSession?.targetSeconds;
-
-    stopSession();
-
-    // =========================
-    // 🧠 FEEDBACK (alineado a validación)
-    // =========================
-    const feedback = getSessionFeedback(duration, target);
-
-    alert(`${feedback.title}\n${feedback.message}`);
-  };
-  
-
-  // =========================
-  // 🎨 UI
-  // =========================
   return (
-    <Card style={{ margin: 16, padding: 16, backgroundColor: "#E5E7EB" }}>
+    <Card style={{ margin: 16, padding: 16 }}>
+      <Card.Title title="⏱️ Timer" />
 
-      <Card.Content >
-        <Text style={{ color: "#0D0F14", paddingHorizontal: 2 }} >⏱️ Time</Text>
+      <Card.Content>
         <Text style={{ fontSize: 32, textAlign: "center" }}>
           {currentSession
             ? formatTime(currentSession.duration)
@@ -104,14 +44,8 @@ export default function Timer() {
         </Text>
 
         {selectedHabit && (
-          <Text style={{ textAlign: "center", marginTop: 8 }}>
+          <Text style={{ textAlign: "center" }}>
             🎯 {selectedHabit.name}
-          </Text>
-        )}
-
-        {currentSession?.targetSeconds && (
-          <Text style={{ textAlign: "center", marginTop: 4 }}>
-            Objetivo: {formatTime(currentSession.targetSeconds)}
           </Text>
         )}
       </Card.Content>
@@ -122,24 +56,24 @@ export default function Timer() {
             mode="contained"
             onPress={() => startSession(selectedHabitId)}
           >
-            Iniciar
+            ▶️ Empezar foco
           </Button>
         )}
 
         {currentSession?.active && (
-          <Button mode="outlined" onPress={pauseSession}>
+          <Button onPress={pauseSession}>
             Pausar
           </Button>
         )}
 
         {currentSession && !currentSession.active && (
-          <Button mode="contained" onPress={resumeSession}>
+          <Button onPress={resumeSession}>
             Reanudar
           </Button>
         )}
 
         {currentSession && (
-          <Button mode="text" onPress={handleStop}>
+          <Button onPress={stopSession}>
             Finalizar
           </Button>
         )}
