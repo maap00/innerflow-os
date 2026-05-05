@@ -194,6 +194,23 @@ export default function Dashboard({ navigation }) {
           Sos una persona que entrena su foco diariamente.
         </Text>
       </Card>
+        {/* =========================
+          🎯 HÁBITOS
+      ========================= */}
+
+        {habits.map((h) => {
+        const progress = getHabitProgress(sessions, h.id);
+
+        return (
+            <HabitCard
+            key={h.id}
+            habit={h}
+            progress={progress}
+            onSelect={() => selectHabit(h.id)}
+            onComplete={() => completeHabit(h.id)}
+            />
+        );
+        })}
 
       <Card style={{ marginBottom: 20, padding: 16 }}>
         <Text style={{ fontSize: 18, fontWeight: "bold" }}>
@@ -284,23 +301,7 @@ export default function Dashboard({ navigation }) {
         </Card>
         )}
 
-      {/* =========================
-          🎯 HÁBITOS
-      ========================= */}
-
-        {habits.map((h) => {
-        const progress = getHabitProgress(sessions, h.id);
-
-        return (
-            <HabitCard
-            key={h.id}
-            habit={h}
-            progress={progress}
-            onSelect={() => selectHabit(h.id)}
-            onComplete={() => completeHabit(h.id)}
-            />
-        );
-        })}
+    
 
       {/* =========================
           ⏱️ TIMER + HISTORIAL

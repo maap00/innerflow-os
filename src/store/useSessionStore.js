@@ -1,10 +1,17 @@
 import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getLevelData } from "../helpers/level";
+import { getLastResetTime } from "../helpers/timeWindow";
 
+// =========================
+// ⚙️ CONFIG
+// =========================
 const MIN_VALID_SECONDS = 60;
 const MIN_PROGRESS_RATIO = 0.6;
 
+// =========================
+// 💾 STORAGE HELPERS
+// =========================
 const saveData = async (key, data) => {
   await AsyncStorage.setItem(key, JSON.stringify(data));
 };
@@ -14,6 +21,9 @@ const loadData = async (key) => {
   return data ? JSON.parse(data) : null;
 };
 
+// =========================
+// 🧠 STORE
+// =========================
 export const useSessionStore = create((set, get) => ({
   sessions: [],
   currentSession: null,
@@ -24,18 +34,32 @@ export const useSessionStore = create((set, get) => ({
   balance: 0,
 
   // =========================
-  // LOAD
+  // 🔄 LOAD + MIGRACIÓN
   // =========================
   loadInitialData: async () => {
     const sessions = await loadData("sessions");
-    const habits = await loadData("habits");
+    const habits = (await loadData("habits")) || [];
     const streak = await loadData("streak");
     const points = await loadData("points");
     const balance = await loadData("balance");
 
+    const migratedHabits = habits.map((h) => ({
+      validationType: "time",
+      totalDays: 30,
+      stage: 1,
+      currentDay: 0,
+      stageConfig: {
+        stage1: 30,
+        stage2: 30,
+        stage3: 30,
+      },
+      lastCompletedAt: null,
+      ...h,
+    }));
+
     set({
       sessions: sessions || [],
-      habits: habits || [],
+      habits: migratedHabits,
       streak: streak || 0,
       points: points || 0,
       balance: balance || 0,
@@ -43,7 +67,7 @@ export const useSessionStore = create((set, get) => ({
   },
 
   // =========================
-  // HABITS (UPDATED)
+  // 🎯 HABITS
   // =========================
   addHabit: (name, targetMinutes = 0, type = "time") =>
     set((state) => {
@@ -55,6 +79,7 @@ export const useSessionStore = create((set, get) => ({
 
         currentDay: 0,
         stage: 1,
+        totalDays: 30,
 
         stageConfig: {
           stage1: 30,
@@ -72,35 +97,43 @@ export const useSessionStore = create((set, get) => ({
       return { habits: updated };
     }),
 
+  // 👉 SOLO PARA HÁBITOS MANUALES
   completeHabit: (habitId) =>
     set((state) => {
       const now = Date.now();
+      const lastReset = getLastResetTime();
 
       const updated = state.habits.map((h) => {
         if (h.id !== habitId) return h;
 
-        if (
-          h.lastCompletedAt &&
-          now - h.lastCompletedAt < 86400000
-        ) {
+        if (h.lastCompletedAt && h.lastCompletedAt > lastReset) {
           return h;
         }
 
         const newDay = h.currentDay + 1;
 
-        let newStage = h.stage;
+        const s1 = h.stageConfig.stage1;
+        const s2 = h.stageConfig.stage2;
+        const s3 = h.stageConfig.stage3;
 
-        if (newDay > h.stageConfig.stage1) newStage = 2;
-        if (
-          newDay >
-          h.stageConfig.stage1 + h.stageConfig.stage2
-        )
+        let newStage = 1;
+        let totalDays = s1;
+
+        if (newDay > s1) {
+          newStage = 2;
+          totalDays = s1 + s2;
+        }
+
+        if (newDay > s1 + s2) {
           newStage = 3;
+          totalDays = s1 + s2 + s3;
+        }
 
         return {
           ...h,
           currentDay: newDay,
           stage: newStage,
+          totalDays,
           lastCompletedAt: now,
         };
       });
@@ -113,7 +146,7 @@ export const useSessionStore = create((set, get) => ({
   selectHabit: (id) => set({ selectedHabitId: id }),
 
   // =========================
-  // SESSION CONTROL
+  // ⏱️ SESSION CONTROL
   // =========================
   startSession: (habitId) =>
     set((state) => {
@@ -158,6 +191,9 @@ export const useSessionStore = create((set, get) => ({
       };
     }),
 
+  // =========================
+  // 🛑 STOP SESSION (FIXED)
+  // =========================
   stopSession: () =>
     set((state) => {
       const session = state.currentSession;
@@ -179,10 +215,47 @@ export const useSessionStore = create((set, get) => ({
 
       const updatedSessions = [...state.sessions, newSession];
 
-      // 🎯 completar hábito si aplica
+      let updatedHabits = state.habits;
+
+      // 🔥 TODO EN UNA SOLA MUTACIÓN (SIN BUG)
       if (isValid && session.habitId) {
-        const { completeHabit } = get();
-        completeHabit(session.habitId);
+        const now = Date.now();
+        const lastReset = getLastResetTime();
+
+        updatedHabits = state.habits.map((h) => {
+          if (h.id !== session.habitId) return h;
+
+          if (h.lastCompletedAt && h.lastCompletedAt > lastReset) {
+            return h;
+          }
+
+          const newDay = h.currentDay + 1;
+
+          const s1 = h.stageConfig.stage1;
+          const s2 = h.stageConfig.stage2;
+          const s3 = h.stageConfig.stage3;
+
+          let newStage = 1;
+          let totalDays = s1;
+
+          if (newDay > s1) {
+            newStage = 2;
+            totalDays = s1 + s2;
+          }
+
+          if (newDay > s1 + s2) {
+            newStage = 3;
+            totalDays = s1 + s2 + s3;
+          }
+
+          return {
+            ...h,
+            currentDay: newDay,
+            stage: newStage,
+            totalDays,
+            lastCompletedAt: now,
+          };
+        });
       }
 
       const earnedPoints = isValid
@@ -192,20 +265,39 @@ export const useSessionStore = create((set, get) => ({
       const newPoints = state.points + earnedPoints;
       const newBalance = state.balance + earnedPoints;
 
+      // 💾 Persistencia consistente
       saveData("sessions", updatedSessions);
+      saveData("habits", updatedHabits);
       saveData("points", newPoints);
       saveData("balance", newBalance);
 
       return {
         sessions: updatedSessions,
+        habits: updatedHabits,
         currentSession: null,
         points: newPoints,
         balance: newBalance,
       };
     }),
 
+  // =========================
+  // 🏆 LEVEL
+  // =========================
   getLevel: () => {
     const { points } = get();
     return getLevelData(points);
+  },
+
+  // =========================
+  // 🧹 RESET
+  // =========================
+  resetSessions: () => {
+    saveData("sessions", []);
+    saveData("streak", 0);
+
+    set({
+      sessions: [],
+      streak: 0,
+    });
   },
 }));

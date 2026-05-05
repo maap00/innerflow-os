@@ -2,6 +2,8 @@ import { View, Text } from "react-native";
 import { Button, ProgressBar } from "react-native-paper";
 import { formatTime } from "../../helpers/time";
 import { pluralizeDays } from "../../helpers/date";
+import { getLastResetTime } from "../../helpers/timeWindow";
+
 
 export default function HabitCard({
   habit,
@@ -23,26 +25,26 @@ export default function HabitCard({
     return "🏆 Integración";
   };
 
-  const isLocked =
+    const lastReset = getLastResetTime();
+
+    const isLocked =
     habit.lastCompletedAt &&
-    Date.now() - habit.lastCompletedAt <
-      86400000;
+    habit.lastCompletedAt > lastReset;
 
   return (
     <View style={{ marginBottom: 16 }}>
-      {/* 🔥 progreso */}
-      <Text>
-        🔥 {habit.currentDay}/{total}{" "}
-        {pluralizeDays(habit.currentDay)}
-      </Text>
-
-      {/* 🧠 etapa */}
-      <Text>{getStageLabel()}</Text>
-
       {/* 🏷️ nombre */}
       <Text style={{ fontSize: 18, fontWeight: "bold" }}>
         {habit.name}
       </Text>
+      {/* 🔥 progreso */}
+     <Text>
+    🔥 {habit.currentDay}/{habit.totalDays} días
+    </Text>
+
+      {/* 🧠 etapa */}
+      <Text>{getStageLabel()}</Text>
+
 
       {/* ⏱️ progreso */}
       {habit.validationType === "time" && (
@@ -58,8 +60,9 @@ export default function HabitCard({
 
       {/* 🔒 lock */}
       {isLocked && (
-        <Text>⏳ Ya completaste hoy</Text>
+        <Text>⏳ Ya completaste hoy. Podrás continuar a partir de las 6 AM</Text>
       )}
+     
 
       {/* 🎮 acciones */}
       {!isLocked && (
