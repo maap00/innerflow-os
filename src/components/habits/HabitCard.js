@@ -1,9 +1,9 @@
 import { View, Text } from "react-native";
 import { Button, ProgressBar } from "react-native-paper";
+import Card from "../ui/Card";
+import { colors } from "../../theme/colors";
 import { formatTime } from "../../helpers/time";
-import { pluralizeDays } from "../../helpers/date";
 import { getLastResetTime } from "../../helpers/timeWindow";
-
 
 export default function HabitCard({
   habit,
@@ -11,13 +11,18 @@ export default function HabitCard({
   onSelect,
   onComplete,
 }) {
-  const total =
-    habit.stageConfig.stage1 +
-    habit.stageConfig.stage2 +
-    habit.stageConfig.stage3;
+  const total = habit.totalDays || 30;
 
   const progressPercent =
-    total > 0 ? habit.currentDay / total : 0;
+    habit.validationType === "time"
+      ? Math.min(progress / habit.targetSeconds, 1)
+      : habit.currentDay / total;
+
+  const lastReset = getLastResetTime();
+
+  const isLocked =
+    habit.lastCompletedAt &&
+    habit.lastCompletedAt > lastReset;
 
   const getStageLabel = () => {
     if (habit.stage === 1) return "🧱 Destrucción";
@@ -25,61 +30,124 @@ export default function HabitCard({
     return "🏆 Integración";
   };
 
-    const lastReset = getLastResetTime();
-
-    const isLocked =
-    habit.lastCompletedAt &&
-    habit.lastCompletedAt > lastReset;
-
   return (
-    <View style={{ marginBottom: 16 }}>
-      {/* 🏷️ nombre */}
-      <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+    <Card>
+      {/* 🔥 HEADER */}
+      <View style={{ marginBottom: 8 }}>
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: 12,
+          }}
+        >
+          🔥 {habit.currentDay}/{total} días
+        </Text>
+
+        <Text
+          style={{
+            color: colors.primary,
+            fontSize: 13,
+            marginTop: 2,
+          }}
+        >
+          {getStageLabel()}
+        </Text>
+      </View>
+
+      {/* 🏷️ NAME */}
+      <Text
+        style={{
+          color: colors.text,
+          fontSize: 18,
+          fontWeight: "bold",
+          marginBottom: 10,
+        }}
+      >
         {habit.name}
       </Text>
-      {/* 🔥 progreso */}
-     <Text>
-    🔥 {habit.currentDay}/{habit.totalDays} días
-    </Text>
 
-      {/* 🧠 etapa */}
-      <Text>{getStageLabel()}</Text>
-
-
-      {/* ⏱️ progreso */}
+      {/* ⏱️ PROGRESS */}
       {habit.validationType === "time" && (
         <>
-          <Text>
+          <Text
+            style={{
+              color: colors.textSecondary,
+              marginBottom: 6,
+            }}
+          >
             ⏱️ {formatTime(progress)} /{" "}
             {formatTime(habit.targetSeconds)}
           </Text>
 
-          <ProgressBar progress={progress / habit.targetSeconds} />
+          <ProgressBar
+            progress={progressPercent}
+            color={colors.primary}
+            style={{
+              height: 8,
+              borderRadius: 10,
+              backgroundColor: "#1F2937",
+            }}
+          />
         </>
       )}
 
-      {/* 🔒 lock */}
-      {isLocked && (
-        <Text>⏳ Ya completaste hoy. Podrás continuar a partir de las 6 AM</Text>
+      {/* 📊 PROGRESS (manual) */}
+      {habit.validationType === "manual" && (
+        <ProgressBar
+          progress={progressPercent}
+          color={colors.primary}
+          style={{
+            height: 8,
+            borderRadius: 10,
+            backgroundColor: "#1F2937",
+          }}
+        />
       )}
-     
 
-      {/* 🎮 acciones */}
+      {/* 🔒 LOCK */}
+      {isLocked && (
+        <Text
+          style={{
+            color: colors.muted,
+            marginTop: 10,
+          }}
+        >
+          ⏳ Disponible a las 6 AM
+        </Text>
+      )}
+
+      {/* 🎮 ACTIONS */}
       {!isLocked && (
-        <>
+        <View style={{ marginTop: 12 }}>
           {habit.validationType === "time" && (
-            <Button onPress={onSelect}>
-              ▶️ Continuar
+            <Button
+              mode="contained"
+              onPress={onSelect}
+              buttonColor={colors.primary}
+              textColor="#000"
+              style={{
+                borderRadius: 12,
+              }}
+            >
+              ▶️ Continuar foco
             </Button>
           )}
 
           {habit.validationType === "manual" && (
-            <Button onPress={onComplete}>
+            <Button
+              mode="contained"
+              onPress={onComplete}
+              buttonColor={colors.primary}
+              textColor="#000"
+              style={{
+                borderRadius: 12,
+              }}
+            >
               ✔ Marcar como hecho
             </Button>
           )}
-        </>
+        </View>
       )}
-    </View>
+    </Card>
   );
 }
