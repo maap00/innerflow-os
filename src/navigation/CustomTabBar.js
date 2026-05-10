@@ -1,18 +1,37 @@
-import { View, TouchableOpacity } from "react-native";
-import Icon from "react-native-vector-icons/Feather";
+import { View, Pressable } from "react-native";
+// import Icon from "react-native-vector-icons/Feather";
+import { Feather } from "@expo/vector-icons";
+
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { colors } from "../theme/colors";
 
-export default function CustomTabBar({ state, descriptors, navigation }) {
+export default function CustomTabBar({
+  state,
+  descriptors,
+  navigation,
+}) {
+  const insets = useSafeAreaInsets();
+
   return (
     <View
       style={{
         flexDirection: "row",
+
         backgroundColor: "#0B0F14",
-        borderTopWidth: 0,
-        height: 70,
+
+        borderTopWidth: 1,
+        borderTopColor: "rgba(255,255,255,0.05)",
+
+        paddingTop: 10,
+
+        // 🔥 SAFE AREA REAL
+        paddingBottom: Math.max(insets.bottom, 12),
+
+        height: 70 + insets.bottom,
+
         justifyContent: "space-around",
         alignItems: "center",
-        paddingBottom: 10,
       }}
     >
       {state.routes.map((route, index) => {
@@ -20,11 +39,20 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
 
         let iconName;
 
-        if (route.name === "Dashboard") iconName = "home";
-        if (route.name === "Habitos") iconName = "check-circle";
-        if (route.name === "Timer") iconName = "clock";
-        if (route.name === "Historial") iconName = "bar-chart-2";
-        if (route.name === "Perfil") iconName = "user";
+        if (route.name === "Dashboard")
+          iconName = "home";
+
+        if (route.name === "Habitos")
+          iconName = "check-circle";
+
+        if (route.name === "Timer")
+          iconName = "clock";
+
+        if (route.name === "Historial")
+          iconName = "bar-chart-2";
+
+        if (route.name === "Perfil")
+          iconName = "user";
 
         const onPress = () => {
           const event = navigation.emit({
@@ -38,38 +66,60 @@ export default function CustomTabBar({ state, descriptors, navigation }) {
         };
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={route.key}
             onPress={onPress}
             style={{
+              flex: 1,
               alignItems: "center",
               justifyContent: "center",
-              flex: 1,
             }}
+            android_ripple={{
+              color: "transparent",
+            }}  
           >
             <View
               style={{
-                padding: 10,
-                borderRadius: 20,
+                width: 48,
+                height: 48,
 
-                // 🔥 glow effect activo
+                borderRadius: 24,
+
+                alignItems: "center",
+                justifyContent: "center",
+
                 backgroundColor: isFocused
-                  ? "rgba(74, 222, 128, 0.15)"
+                  ? "rgba(74,222,128,0.12)"
                   : "transparent",
 
-                shadowColor: isFocused ? colors.primary : "transparent",
-                shadowOpacity: isFocused ? 0.6 : 0,
-                shadowRadius: isFocused ? 12 : 0,
-                shadowOffset: { width: 0, height: 0 },
+                // ✨ GLOW
+                shadowColor: isFocused
+                  ? colors.primary
+                  : "transparent",
+
+                shadowOpacity: isFocused ? 0.5 : 0,
+
+                shadowRadius: isFocused ? 14 : 0,
+
+                shadowOffset: {
+                  width: 0,
+                  height: 0,
+                },
+
+                elevation: isFocused ? 10 : 0,
               }}
             >
-              <Icon
+            <Feather
                 name={iconName}
                 size={22}
-                color={isFocused ? colors.primary : "#6B7280"}
-              />
+                color={
+                    isFocused
+                    ? colors.primary
+                    : "#6B7280"
+                }
+            />
             </View>
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>

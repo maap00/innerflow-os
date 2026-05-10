@@ -40,8 +40,8 @@ export default function Dashboard() {
         backgroundColor: colors.background,
       }}
       contentContainerStyle={{
-        padding: 16,
-        paddingBottom: 40,
+         padding: 16,
+         paddingBottom: 140,
       }}
     >
       {/* 🔥 HEADER */}
