@@ -1,8 +1,15 @@
-import { View, Text } from "react-native";
-import { Button, ProgressBar } from "react-native-paper";
+import { View, Text, Pressable } from "react-native";
+
+import { ProgressBar } from "react-native-paper";
+
+import { Feather } from "@expo/vector-icons";
+
 import Card from "../ui/Card";
+
 import { colors } from "../../theme/colors";
+
 import { formatTime } from "../../helpers/time";
+
 import { getLastResetTime } from "../../helpers/timeWindow";
 
 export default function HabitCard({
@@ -11,140 +18,407 @@ export default function HabitCard({
   onSelect,
   onComplete,
 }) {
-  const total = habit.totalDays || 30;
+  // =========================
+  // 🧠 DII
+  // =========================
+
+  const total =
+    habit.totalDays || 30;
 
   const progressPercent =
     habit.validationType === "time"
-      ? Math.min(progress / habit.targetSeconds, 1)
+      ? Math.min(
+          progress / habit.targetSeconds,
+          1
+        )
       : habit.currentDay / total;
 
-  const lastReset = getLastResetTime();
+  // =========================
+  // 🔒 LOCK
+  // =========================
+
+  const lastReset =
+    getLastResetTime();
 
   const isLocked =
     habit.lastCompletedAt &&
     habit.lastCompletedAt > lastReset;
 
-  const getStageLabel = () => {
-    if (habit.stage === 1) return "🧱 Destrucción";
-    if (habit.stage === 2) return "⚙️ Implementación";
-    return "🏆 Integración";
+  // =========================
+  // 🎨 STAGE UI
+  // =========================
+
+  const getStageData = () => {
+    if (habit.stage === 1) {
+      return {
+        label: "🧱 Destrucción",
+        accent: "#CD7F32",
+      };
+    }
+
+    if (habit.stage === 2) {
+      return {
+        label: "⚙️ Implementación",
+        accent: "#C0C0C0",
+      };
+    }
+
+    return {
+      label: "🏆 Integración",
+      accent: "#FFD700",
+    };
   };
 
-  return (
-    <Card>
-      {/* 🔥 HEADER */}
-      <View style={{ marginBottom: 8 }}>
-        <Text
-          style={{
-            color: colors.textSecondary,
-            fontSize: 12,
-          }}
-        >
-          🔥 {habit.currentDay}/{total} días
-        </Text>
+  const stage =
+    getStageData();
 
-        <Text
+  // =========================
+  // 🔥 STREAK
+  // =========================
+
+  const isHighStreak =
+    habit.currentDay >= 7;
+
+  // =========================
+  // 🎨 UI
+  // =========================
+
+  return (
+    <Card
+      style={{
+        opacity: isLocked ? 0.75 : 1,
+
+        borderColor: isHighStreak
+          ? colors.primary
+          : colors.border,
+
+        shadowColor: isHighStreak
+          ? colors.primary
+          : "#000",
+
+        shadowOpacity: isHighStreak
+          ? 0.35
+          : 0.2,
+      }}
+    >
+      {/* 🔥 TOP */}
+
+      <View
+        style={{
+          flexDirection: "row",
+
+          justifyContent:
+            "space-between",
+
+          alignItems: "center",
+
+          marginBottom: 14,
+        }}
+      >
+        {/* LEFT */}
+
+        <View>
+          <Text
+            style={{
+              color:
+                colors.textSecondary,
+
+              fontSize: 12,
+            }}
+          >
+            🔥 {habit.currentDay}/
+            {total} días
+          </Text>
+
+          <Text
+            style={{
+              color:
+                stage.accent,
+
+              marginTop: 4,
+
+              fontSize: 13,
+
+              fontWeight: "600",
+            }}
+          >
+            {stage.label}
+          </Text>
+        </View>
+
+        {/* BADGES */}
+
+        <View
           style={{
-            color: colors.primary,
-            fontSize: 13,
-            marginTop: 2,
+            flexDirection: "row",
+            gap: 8,
           }}
         >
-          {getStageLabel()}
-        </Text>
+          {isHighStreak && (
+            <View
+              style={{
+                backgroundColor:
+                  "rgba(74,222,128,0.15)",
+
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+
+                borderRadius: 20,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    colors.primary,
+
+                  fontSize: 12,
+
+                  fontWeight: "bold",
+                }}
+              >
+                🔥 STREAK
+              </Text>
+            </View>
+          )}
+
+          {habit.stage === 2 && (
+            <Text
+              style={{
+                fontSize: 20,
+              }}
+            >
+              🥈
+            </Text>
+          )}
+
+          {habit.stage === 3 && (
+            <Text
+              style={{
+                fontSize: 20,
+              }}
+            >
+              🥇
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* 🏷️ NAME */}
+
       <Text
         style={{
           color: colors.text,
-          fontSize: 18,
+
+          fontSize: 22,
+
           fontWeight: "bold",
-          marginBottom: 10,
+
+          marginBottom: 14,
         }}
       >
         {habit.name}
       </Text>
 
-      {/* ⏱️ PROGRESS */}
-      {habit.validationType === "time" && (
+      {/* ⏱️ TIME HABIT */}
+
+      {habit.validationType ===
+        "time" && (
         <>
           <Text
             style={{
-              color: colors.textSecondary,
-              marginBottom: 6,
+              color:
+                colors.textSecondary,
+
+              marginBottom: 10,
             }}
           >
             ⏱️ {formatTime(progress)} /{" "}
-            {formatTime(habit.targetSeconds)}
+            {formatTime(
+              habit.targetSeconds
+            )}
           </Text>
 
           <ProgressBar
-            progress={progressPercent}
+            progress={
+              progressPercent
+            }
             color={colors.primary}
             style={{
-              height: 8,
-              borderRadius: 10,
-              backgroundColor: "#1F2937",
+              height: 10,
+
+              borderRadius: 12,
+
+              backgroundColor:
+                "#1F2937",
             }}
           />
         </>
       )}
 
-      {/* 📊 PROGRESS (manual) */}
-      {habit.validationType === "manual" && (
-        <ProgressBar
-          progress={progressPercent}
-          color={colors.primary}
-          style={{
-            height: 8,
-            borderRadius: 10,
-            backgroundColor: "#1F2937",
-          }}
-        />
+      {/* ✔ MANUAL */}
+
+      {habit.validationType ===
+        "manual" && (
+        <>
+          <Text
+            style={{
+              color:
+                colors.textSecondary,
+
+              marginBottom: 10,
+            }}
+          >
+            ✔ Validación manual
+          </Text>
+
+          <ProgressBar
+            progress={
+              progressPercent
+            }
+            color={colors.primary}
+            style={{
+              height: 10,
+
+              borderRadius: 12,
+
+              backgroundColor:
+                "#1F2937",
+            }}
+          />
+        </>
       )}
 
-      {/* 🔒 LOCK */}
+      {/* 🔒 LOCK STATE */}
+
       {isLocked && (
-        <Text
+        <View
           style={{
-            color: colors.muted,
-            marginTop: 10,
+            marginTop: 18,
+
+            flexDirection: "row",
+
+            alignItems: "center",
           }}
         >
-          ⏳ Disponible a las 6 AM
-        </Text>
+          <Feather
+            name="lock"
+            size={16}
+            color={colors.textSecondary}
+          />
+
+          <Text
+            style={{
+              color:
+                colors.textSecondary,
+
+              marginLeft: 8,
+            }}
+          >
+            Completado hoy ·
+            disponible mañana
+            6 AM
+          </Text>
+        </View>
       )}
 
       {/* 🎮 ACTIONS */}
+
       {!isLocked && (
-        <View style={{ marginTop: 12 }}>
-          {habit.validationType === "time" && (
-            <Button
-              mode="contained"
+        <View
+          style={{
+            marginTop: 18,
+          }}
+        >
+          {/* ⏱️ TIME */}
+
+          {habit.validationType ===
+            "time" && (
+            <Pressable
               onPress={onSelect}
-              buttonColor={colors.primary}
-              textColor="#000"
               style={{
-                borderRadius: 12,
+                backgroundColor:
+                  colors.primary,
+
+                paddingVertical: 16,
+
+                borderRadius: 16,
+
+                alignItems: "center",
+
+                shadowColor:
+                  colors.primary,
+
+                shadowOpacity: 0.4,
+
+                shadowRadius: 16,
+
+                shadowOffset: {
+                  width: 0,
+                  height: 8,
+                },
+
+                elevation: 10,
               }}
             >
-              ▶️ Continuar foco
-            </Button>
+              <Text
+                style={{
+                  color: "#000",
+
+                  fontWeight:
+                    "bold",
+
+                  fontSize: 15,
+                }}
+              >
+                ▶ Continuar foco
+              </Text>
+            </Pressable>
           )}
 
-          {habit.validationType === "manual" && (
-            <Button
-              mode="contained"
+          {/* ✔ MANUAL */}
+
+          {habit.validationType ===
+            "manual" && (
+            <Pressable
               onPress={onComplete}
-              buttonColor={colors.primary}
-              textColor="#000"
               style={{
-                borderRadius: 12,
+                backgroundColor:
+                  colors.primary,
+
+                paddingVertical: 16,
+
+                borderRadius: 16,
+
+                alignItems: "center",
+
+                shadowColor:
+                  colors.primary,
+
+                shadowOpacity: 0.4,
+
+                shadowRadius: 16,
+
+                shadowOffset: {
+                  width: 0,
+                  height: 8,
+                },
+
+                elevation: 10,
               }}
             >
-              ✔ Marcar como hecho
-            </Button>
+              <Text
+                style={{
+                  color: "#000",
+
+                  fontWeight:
+                    "bold",
+
+                  fontSize: 15,
+                }}
+              >
+                ✔ Marcar completado
+              </Text>
+            </Pressable>
           )}
         </View>
       )}

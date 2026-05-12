@@ -29,6 +29,9 @@ export default function CreateHabits() {
 
   const [name, setName] = useState("");
 
+  const [nameError, setNameError] =
+    useState(false);
+
   const [validationType, setValidationType] =
     useState("time");
 
@@ -45,6 +48,15 @@ export default function CreateHabits() {
   // =========================
 
   const handleCreateHabit = () => {
+    // 🚨 VALIDATION
+
+    if (!name.trim()) {
+      setNameError(true);
+      return;
+    }
+
+    setNameError(false);
+
     const config = {
       validationType,
 
@@ -67,7 +79,7 @@ export default function CreateHabits() {
             },
     };
 
-    addHabit(name, config);
+    addHabit(name.trim(), config);
 
     navigation.goBack();
   };
@@ -128,7 +140,13 @@ export default function CreateHabits() {
 
           <TextInput
             value={name}
-            onChangeText={setName}
+            onChangeText={(text) => {
+              setName(text);
+
+              if (text.trim()) {
+                setNameError(false);
+              }
+            }}
             placeholder="Ej: Estudiar inglés"
             placeholderTextColor="#6B7280"
             style={{
@@ -142,8 +160,28 @@ export default function CreateHabits() {
               paddingVertical: 14,
 
               fontSize: 16,
+
+              borderWidth: 1,
+
+              borderColor: nameError
+                ? "#EF4444"
+                : "transparent",
             }}
           />
+
+          {nameError && (
+            <Text
+              style={{
+                color: "#EF4444",
+
+                marginTop: 10,
+
+                fontSize: 13,
+              }}
+            >
+              El hábito necesita un nombre.
+            </Text>
+          )}
         </Card>
 
         {/* ⚡ VALIDATION */}
@@ -436,8 +474,6 @@ export default function CreateHabits() {
 
           {mode === "custom" && (
             <View style={{ gap: 12 }}>
-              {/* STAGE 1 */}
-
               <TextInput
                 value={stage1}
                 onChangeText={setStage1}
@@ -456,8 +492,6 @@ export default function CreateHabits() {
                 }}
               />
 
-              {/* STAGE 2 */}
-
               <TextInput
                 value={stage2}
                 onChangeText={setStage2}
@@ -475,8 +509,6 @@ export default function CreateHabits() {
                   paddingVertical: 14,
                 }}
               />
-
-              {/* STAGE 3 */}
 
               <TextInput
                 value={stage3}
@@ -564,7 +596,14 @@ export default function CreateHabits() {
         }}
       >
         <Pressable
-          onPress={handleCreateHabit}
+          onPress={() => {
+            if (!name.trim()) {
+              setNameError(true);
+              return;
+            }
+
+            handleCreateHabit();
+          }}
           style={{
             backgroundColor: colors.primary,
 
@@ -573,6 +612,10 @@ export default function CreateHabits() {
             borderRadius: 18,
 
             alignItems: "center",
+
+            opacity: name.trim()
+              ? 1
+              : 0.5,
 
             shadowColor: colors.primary,
             shadowOpacity: 0.5,
