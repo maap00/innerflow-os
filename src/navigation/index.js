@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import Dashboard from "../screens/Dashboard";
 import Focus from "../screens/Focus";
-import CreateHabit from "../screens/CreateHabit";
+import CreateHabits from "../screens/CreateHabits";
 
 const Stack = createNativeStackNavigator();
 
@@ -13,7 +13,7 @@ export default function Navigation() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Dashboard" component={Dashboard} />
         <Stack.Screen name="Focus" component={Focus} />
-        <Stack.Screen name="CreateHabit" component={CreateHabit} />
+        <Stack.Screen name="CreateHabits" component={CreateHabits} />
 
       </Stack.Navigator>
     </NavigationContainer>

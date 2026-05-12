@@ -69,34 +69,50 @@ export const useSessionStore = create((set, get) => ({
   // =========================
   // 🎯 HABITS
   // =========================
-  addHabit: (name, targetMinutes = 0, type = "time") =>
-    set((state) => {
-      const newHabit = {
-        id: Date.now().toString(),
-        name,
-        validationType: type,
-        targetSeconds: type === "time" ? targetMinutes * 60 : null,
+addHabit: (name, config) =>
+  set((state) => {
+    const stageConfig = config.stageConfig;
 
-        currentDay: 0,
-        stage: 1,
-        totalDays: 30,
+    const totalDays =
+      stageConfig.stage1;
 
-        stageConfig: {
-          stage1: 30,
-          stage2: 30,
-          stage3: 30,
-        },
+    const newHabit = {
+      id: Date.now().toString(),
 
-        lastCompletedAt: null,
-        streak: 0,
-      };
+      name,
 
-      const updated = [...state.habits, newHabit];
-      saveData("habits", updated);
+      validationType:
+        config.validationType,
 
-      return { habits: updated };
-    }),
+      targetSeconds:
+        config.validationType === "time"
+          ? config.targetMinutes * 60
+          : null,
 
+      currentDay: 0,
+
+      stage: 1,
+
+      totalDays,
+
+      stageConfig,
+
+      lastCompletedAt: null,
+
+      streak: 0,
+    };
+
+    const updated = [
+      ...state.habits,
+      newHabit,
+    ];
+
+    saveData("habits", updated);
+
+    return {
+      habits: updated,
+    };
+  }),
   // 👉 SOLO PARA HÁBITOS MANUALES
   completeHabit: (habitId) =>
     set((state) => {
