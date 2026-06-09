@@ -16,6 +16,9 @@ import CreateHabits from "../screens/CreateHabits";
 
 import CustomTabBar from "./CustomTabBar";
 
+import HabitSessionScreen
+from "../screens/HabitSessionScreen";
+
 const Stack = createNativeStackNavigator();
 
 const Tab = createBottomTabNavigator();
@@ -42,7 +45,7 @@ function Tabs() {
       />
 
       <Tab.Screen
-        name="Timer"
+        name="TimerScreen"
         component={TimerScreen}
       />
 
@@ -54,6 +57,16 @@ function Tabs() {
       <Tab.Screen
         name="Perfil"
         component={Profile}
+      />
+
+      <Stack.Screen
+        name="HabitSession"
+        component={
+          HabitSessionScreen
+        }
+        options={{
+          headerShown: false,
+        }}
       />
     </Tab.Navigator>
   );

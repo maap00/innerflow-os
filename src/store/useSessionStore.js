@@ -8,7 +8,39 @@ import { getLastResetTime } from "../helpers/timeWindow";
 // =========================
 const MIN_VALID_SECONDS = 60;
 const MIN_PROGRESS_RATIO = 0.6;
+const migrateSessions = (
+  sessions = []
+) => {
+  return sessions.map((s) => ({
+    id:
+      s.id ??
+      Date.now().toString(),
 
+    habitId: s.habitId,
+
+    startedAt:
+      s.startedAt ??
+      s.startTime ??
+      Date.now(),
+
+    endedAt:
+      s.endedAt ??
+      s.endTime ??
+      Date.now(),
+
+    durationSeconds:
+      s.durationSeconds ??
+      s.duration ??
+      0,
+
+    createdAt:
+      s.createdAt ??
+      Date.now(),
+
+    isValid:
+      s.isValid ?? true,
+  }));
+};
 // =========================
 // 💾 STORAGE HELPERS
 // =========================
@@ -58,7 +90,10 @@ export const useSessionStore = create((set, get) => ({
     }));
 
     set({
-      sessions: sessions || [],
+      sessions:
+      migrateSessions(
+        sessions || []
+      ),
       habits: migratedHabits,
       streak: streak || 0,
       points: points || 0,
@@ -161,6 +196,113 @@ addHabit: (name, config) =>
 
   selectHabit: (id) => set({ selectedHabitId: id }),
 
+  addSession: ({
+  habitId,
+  startedAt,
+  endedAt,
+  durationSeconds,
+}) =>
+  set((state) => {
+    const newSession = {
+      id:
+        Date.now().toString(),
+
+      habitId,
+
+      startedAt,
+
+      endedAt,
+
+      durationSeconds,
+
+      createdAt:
+        Date.now(),
+
+      isValid: true,
+    };
+
+    const updatedSessions =
+      [
+        ...state.sessions,
+        newSession,
+      ];
+
+    saveData(
+      "sessions",
+      updatedSessions
+    );
+
+    return {
+      sessions:
+        updatedSessions,
+    };
+  }),
+
+  checkHabitCompletion:
+  (habitId) => {
+    const state = get();
+
+    const habit =
+      state.habits.find(
+        (h) =>
+          h.id === habitId
+      );
+
+    if (
+      !habit ||
+      habit.validationType !==
+        "time"
+    ) {
+      return;
+    }
+
+    const lastReset =
+      getLastResetTime();
+
+    const completedToday =
+      habit.lastCompletedAt &&
+      habit.lastCompletedAt >
+        lastReset;
+
+    if (completedToday) {
+      return;
+    }
+
+    const today =
+      new Date();
+
+    const todaySeconds =
+      state.sessions
+        .filter((s) => {
+          const date =
+            new Date(
+              s.createdAt
+            );
+
+          return (
+            s.habitId ===
+              habitId &&
+            date.toDateString() ===
+              today.toDateString()
+          );
+        })
+        .reduce(
+          (sum, s) =>
+            sum +
+            s.durationSeconds,
+          0
+        );
+
+    if (
+      todaySeconds >=
+      habit.targetSeconds
+    ) {
+      state.completeHabit(
+        habitId
+      );
+    }
+  },
+
   // =========================
   // ⏱️ SESSION CONTROL
   // =========================
@@ -210,91 +352,100 @@ addHabit: (name, config) =>
   // =========================
   // 🛑 STOP SESSION (FIXED)
   // =========================
-  stopSession: () =>
-    set((state) => {
-      const session = state.currentSession;
-      if (!session) return {};
+ stopSession: () =>
+  set((state) => {
+    const session =
+      state.currentSession;
 
-      const duration = session.duration;
-      const target = session.targetSeconds;
+    if (!session) {
+      return {};
+    }
 
-      const isValid =
-        duration >= MIN_VALID_SECONDS &&
-        (!target || duration / target >= MIN_PROGRESS_RATIO);
+    const duration =
+      session.duration;
 
-      const newSession = {
-        ...session,
-        endTime: Date.now(),
+    const target =
+      session.targetSeconds;
+
+    const isValid =
+      duration >=
+        MIN_VALID_SECONDS &&
+      (!target ||
+        duration / target >=
+          MIN_PROGRESS_RATIO);
+
+    const newSession = {
+      id:
+        Date.now().toString(),
+
+      habitId:
+        session.habitId,
+
+      startedAt:
+        session.startTime,
+
+      endedAt:
+        Date.now(),
+
+      durationSeconds:
         duration,
-        isValid,
-      };
 
-      const updatedSessions = [...state.sessions, newSession];
+      createdAt:
+        Date.now(),
 
-      let updatedHabits = state.habits;
+      isValid,
+    };
 
-      // 🔥 TODO EN UNA SOLA MUTACIÓN (SIN BUG)
-      if (isValid && session.habitId) {
-        const now = Date.now();
-        const lastReset = getLastResetTime();
+    const updatedSessions =
+      [
+        ...state.sessions,
+        newSession,
+      ];
 
-        updatedHabits = state.habits.map((h) => {
-          if (h.id !== session.habitId) return h;
-
-          if (h.lastCompletedAt && h.lastCompletedAt > lastReset) {
-            return h;
-          }
-
-          const newDay = h.currentDay + 1;
-
-          const s1 = h.stageConfig.stage1;
-          const s2 = h.stageConfig.stage2;
-          const s3 = h.stageConfig.stage3;
-
-          let newStage = 1;
-          let totalDays = s1;
-
-          if (newDay > s1) {
-            newStage = 2;
-            totalDays = s1 + s2;
-          }
-
-          if (newDay > s1 + s2) {
-            newStage = 3;
-            totalDays = s1 + s2 + s3;
-          }
-
-          return {
-            ...h,
-            currentDay: newDay,
-            stage: newStage,
-            totalDays,
-            lastCompletedAt: now,
-          };
-        });
-      }
-
-      const earnedPoints = isValid
-        ? Math.floor(duration / 60)
+    const earnedPoints =
+      isValid
+        ? Math.floor(
+            duration / 60
+          )
         : 0;
 
-      const newPoints = state.points + earnedPoints;
-      const newBalance = state.balance + earnedPoints;
+    const newPoints =
+      state.points +
+      earnedPoints;
 
-      // 💾 Persistencia consistente
-      saveData("sessions", updatedSessions);
-      saveData("habits", updatedHabits);
-      saveData("points", newPoints);
-      saveData("balance", newBalance);
+    const newBalance =
+      state.balance +
+      earnedPoints;
 
-      return {
-        sessions: updatedSessions,
-        habits: updatedHabits,
-        currentSession: null,
-        points: newPoints,
-        balance: newBalance,
-      };
-    }),
+    saveData(
+      "sessions",
+      updatedSessions
+    );
+
+    saveData(
+      "points",
+      newPoints
+    );
+
+    saveData(
+      "balance",
+      newBalance
+    );
+
+    return {
+      sessions:
+        updatedSessions,
+
+      currentSession:
+        null,
+
+      points:
+        newPoints,
+
+      balance:
+        newBalance,
+    };
+  }),
 
   // =========================
   // 🏆 LEVEL
