@@ -5,6 +5,9 @@ import { Button } from "react-native-paper";
 import { useSessionStore } from "../../store/useSessionStore";
 import CircularTimer from "./CircularTimer";
 import { colors } from "../../theme/colors";
+import {
+  useNavigation,
+} from "@react-navigation/native";
 
 export default function Timer() {
   const {
@@ -17,6 +20,9 @@ export default function Timer() {
     habits,
     selectedHabitId,
   } = useSessionStore();
+
+  const navigation =
+  useNavigation();
 
   // ⏱️ Tick loop
   useEffect(() => {
@@ -116,13 +122,17 @@ export default function Timer() {
 
         {/* ⛔ STOP */}
         {currentSession && (
-          <Button
-            mode="text"
-            onPress={stopSession}
-            textColor="#ef4444"
+         <Button
+          mode="text"
+          onPress={() => {
+            stopSession();
+
+            navigation.goBack();
+          }}
+          textColor="#ef4444"
           >
-            Finalizar
-          </Button>
+          Finalizar
+         </Button>
         )}
       </View>
     </View>

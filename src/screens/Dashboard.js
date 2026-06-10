@@ -21,6 +21,10 @@ import {
   getHabitProgress,
 } from "../helpers/habits";
 
+import {
+  useNavigation,
+} from "@react-navigation/native";
+
 export default function Dashboard() {
   const {
     habits,
@@ -37,6 +41,9 @@ export default function Dashboard() {
     getTotalTargetToday(
       habits
     );
+
+    const navigation =
+  useNavigation();
 
   return (
     <ScreenLayout>
@@ -77,11 +84,15 @@ export default function Dashboard() {
             key={habit.id}
             habit={habit}
             progress={progress}
-            onSelect={() =>
+            onStartFocus={() => {
               selectHabit(
                 habit.id
-              )
-            }
+              );
+
+              navigation.navigate(
+                "HabitSession"
+              );
+            }}
             onComplete={() =>
               completeHabit(
                 habit.id

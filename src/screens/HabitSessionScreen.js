@@ -42,7 +42,8 @@ export default function HabitSessionScreen() {
     sessions,
     selectedHabitId,
     checkHabitCompletion,
-  } = useSessionStore();
+    startSession,
+    } = useSessionStore();
 
   const habit =
     habits.find(
@@ -326,11 +327,15 @@ export default function HabitSessionScreen() {
       {/* CLOCK IN */}
 
       <Pressable
-        onPress={() =>
-          navigation.navigate(
+        onPress={() => {
+        startSession(
+            selectedHabitId
+        );
+
+       navigation.navigate(
             "TimerScreen"
-          )
-        }
+        );
+        }}
         style={{
           backgroundColor:
             colors.primary,

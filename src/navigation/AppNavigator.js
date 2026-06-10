@@ -45,11 +45,6 @@ function Tabs() {
       />
 
       <Tab.Screen
-        name="TimerScreen"
-        component={TimerScreen}
-      />
-
-      <Tab.Screen
         name="Historial"
         component={History}
       />
@@ -59,15 +54,7 @@ function Tabs() {
         component={Profile}
       />
 
-      <Stack.Screen
-        name="HabitSession"
-        component={
-          HabitSessionScreen
-        }
-        options={{
-          headerShown: false,
-        }}
-      />
+     
     </Tab.Navigator>
   );
 }
@@ -88,6 +75,19 @@ export default function AppNavigator() {
         name="CreateHabits"
         component={CreateHabits}
       />
+
+      <Stack.Screen
+        name="HabitSession"
+        component={HabitSessionScreen}
+      />
+      
+      <Stack.Screen
+      name="TimerScreen"
+      component={TimerScreen}
+      options={{
+        headerShown: false,
+      }}
+    />
     </Stack.Navigator>
   );
 }

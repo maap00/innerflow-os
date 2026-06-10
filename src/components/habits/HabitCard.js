@@ -15,7 +15,7 @@ import { getLastResetTime } from "../../helpers/timeWindow";
 export default function HabitCard({
   habit,
   progress,
-  onSelect,
+  onStartFocus,
   onComplete,
 }) {
   // =========================
@@ -334,7 +334,7 @@ export default function HabitCard({
           {habit.validationType ===
             "time" && (
             <Pressable
-              onPress={onSelect}
+              onPress={onStartFocus}
               style={{
                 backgroundColor:
                   colors.primary,
