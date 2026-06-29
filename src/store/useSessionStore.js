@@ -3,6 +3,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getLevelData } from "../helpers/level";
 import { getLastResetTime } from "../helpers/timeWindow";
 
+import {
+  getStageAchievement,
+} from "../helpers/achievements";
+
 // =========================
 // ⚙️ CONFIG
 // =========================
@@ -64,6 +68,7 @@ export const useSessionStore = create((set, get) => ({
   streak: 0,
   points: 0,
   balance: 0,
+  achievements: [],
 
   // =========================
   // 🔄 LOAD + MIGRACIÓN
@@ -74,6 +79,10 @@ export const useSessionStore = create((set, get) => ({
     const streak = await loadData("streak");
     const points = await loadData("points");
     const balance = await loadData("balance");
+    const achievements =
+    await loadData(
+      "achievements"
+    );
 
     const migratedHabits = habits.map((h) => ({
       validationType: "time",
@@ -98,6 +107,8 @@ export const useSessionStore = create((set, get) => ({
       streak: streak || 0,
       points: points || 0,
       balance: balance || 0,
+      achievements:
+      achievements || [],
     });
   },
 
@@ -163,6 +174,11 @@ addHabit: (name, config) =>
 
         const newDay = h.currentDay + 1;
 
+        const achievement =
+          getStageAchievement(
+            newDay
+          );
+
         const s1 = h.stageConfig.stage1;
         const s2 = h.stageConfig.stage2;
         const s3 = h.stageConfig.stage3;
@@ -178,6 +194,12 @@ addHabit: (name, config) =>
         if (newDay > s1 + s2) {
           newStage = 3;
           totalDays = s1 + s2 + s3;
+        }
+
+        if (achievement) {
+          get().unlockAchievement(
+            achievement
+          );
         }
 
         return {
@@ -466,5 +488,55 @@ addHabit: (name, config) =>
       sessions: [],
       streak: 0,
     });
+
+   
+    
   },
+
+   saveAchievements:
+    async (
+      achievements
+    ) => {
+      await saveData(
+        "achievements",
+        achievements
+      );
+    },
+
+  unlockAchievement:
+  (achievement) =>
+    set((state) => {
+
+      const alreadyUnlocked =
+        state.achievements.some(
+          (a) =>
+            a.id ===
+            achievement.id
+        );
+
+      if (
+        alreadyUnlocked
+      ) {
+        return {};
+      }
+
+      const achievements =
+        [
+          ...state.achievements,
+          {
+            ...achievement,
+            unlockedAt:
+              Date.now(),
+          },
+        ];
+
+      saveData(
+        "achievements",
+        achievements
+      );
+
+      return {
+        achievements,
+      };
+    }),
 }));

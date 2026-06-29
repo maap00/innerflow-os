@@ -1,5 +1,8 @@
 import { View, Text } from "react-native";
-import CircularTimer from "../timer/CircularTimer";
+
+import Card from "../ui/Card";
+
+import { colors } from "../../theme/colors";
 
 export default function HabitProgressRing({
   progress,
@@ -9,30 +12,66 @@ export default function HabitProgressRing({
   return (
     <View
       style={{
-        alignItems:
-          "center",
-
+        alignItems: "center",
         marginBottom: 30,
       }}
     >
-      <CircularTimer
-        progress={progress}
-      />
-
-      <Text
+      <Card
         style={{
-          marginTop: 20,
-
-          fontSize: 22,
-
-          fontWeight:
-            "bold",
+          marginBottom: 24,
+          width: "100%",
         }}
       >
-        {current}
-        {" / "}
-        {target}
-      </Text>
+        <Text
+          style={{
+            color: colors.textSecondary,
+          }}
+        >
+          Today Progress
+        </Text>
+
+        <Text
+          style={{
+            color: colors.text,
+            fontSize: 48,
+            fontWeight: "bold",
+            marginTop: 12,
+          }}
+        >
+          {current}
+        </Text>
+
+        <View
+          style={{
+            height: 10,
+            backgroundColor: "#1F2937",
+            borderRadius: 999,
+            overflow: "hidden",
+            marginTop: 20,
+          }}
+        >
+          <View
+            style={{
+              width: `${progress * 100}%`,
+              height: "100%",
+              backgroundColor:
+                colors.primary,
+            }}
+          />
+        </View>
+
+        <Text
+          style={{
+            color:
+              colors.textSecondary,
+            marginTop: 10,
+          }}
+        >
+          {current}
+          {" / "}
+          {target}
+        </Text>
+      </Card>
     </View>
   );
 }

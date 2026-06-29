@@ -15,8 +15,6 @@ import React, {
 
 import ScreenLayout from "../components/layout/ScreenLayout";
 
-import Card from "../components/ui/Card";
-
 import { colors } from "../theme/colors";
 
 import {
@@ -32,6 +30,11 @@ import {
   getHabitLifetimeTotal,
   getHabitHistory,
 } from "../helpers/sessions";
+
+import HabitSessionHeader from "../components/habitSession/HabitSessionHeader";
+import HabitMetricsRow from "../components/habitSession/HabitMetricsRow";
+import HabitProgressRing from "../components/habitSession/HabitProgressRing";
+import SessionHistoryList from "../components/habitSession/SessionHistoryList";
 
 export default function HabitSessionScreen() {
   const navigation =
@@ -51,6 +54,7 @@ export default function HabitSessionScreen() {
         h.id ===
         selectedHabitId
     );
+
 
   // ===================================
   // AUTO COMPLETE ON RETURN
@@ -97,331 +101,117 @@ export default function HabitSessionScreen() {
         )
       : 0;
 
+  const isCompletedToday =
+  todayProgress >=
+  habit.targetSeconds;
+
+       
+
   return (
     <ScreenLayout>
-      {/* HERO */}
+        <HabitSessionHeader
+            habit={habit}
+        />
 
-      <View
-        style={{
-          marginBottom: 26,
-        }}
-      >
-        <Text
-          style={{
-            color:
-              colors.primary,
-
-            fontSize: 13,
-          }}
-        >
-          Focus Habit
-        </Text>
-
-        <Text
-          style={{
-            color:
-              colors.text,
-
-            fontSize: 34,
-
-            fontWeight:
-              "bold",
-
-            marginTop: 6,
-          }}
-        >
-          {habit.name}
-        </Text>
-      </View>
-
-      {/* STATS */}
-
-      <View
-        style={{
-          flexDirection:
-            "row",
-
-          gap: 12,
-
-          marginBottom: 24,
-        }}
-      >
-        {/* TODAY */}
-
-        <Card
-          style={{
-            flex: 1,
-          }}
-        >
-          <Text
-            style={{
-              color:
-                colors.textSecondary,
-            }}
-          >
-            Today
-          </Text>
-
-          <Text
-            style={{
-              color:
-                colors.text,
-
-              fontSize: 26,
-
-              fontWeight:
-                "bold",
-
-              marginTop: 8,
-            }}
-          >
-            {formatTime(
-              habit.targetSeconds
-            )}
-          </Text>
-
-          <Text
-            style={{
-              color:
-                colors.textSecondary,
-
-              marginTop: 4,
-            }}
-          >
-            daily target
-          </Text>
-        </Card>
-
-        {/* TOTAL */}
-
-        <Card
-          style={{
-            flex: 1,
-          }}
-        >
-          <Text
-            style={{
-              color:
-                colors.textSecondary,
-            }}
-          >
-            Total Focused
-          </Text>
-
-          <Text
-            style={{
-              color:
-                colors.text,
-
-              fontSize: 26,
-
-              fontWeight:
-                "bold",
-
-              marginTop: 8,
-            }}
-          >
-            {formatTime(
-              totalFocused
-            )}
-          </Text>
-
-          <Text
-            style={{
-              color:
-                colors.textSecondary,
-
-              marginTop: 4,
-            }}
-          >
-            since started
-          </Text>
-        </Card>
-      </View>
-
-      {/* TODAY TIMER */}
-
-      <Card
-        style={{
-          marginBottom: 24,
-        }}
-      >
-        <Text
-          style={{
-            color:
-              colors.textSecondary,
-          }}
-        >
-          Today Progress
-        </Text>
-
-        <Text
-          style={{
-            color:
-              colors.text,
-
-            fontSize: 48,
-
-            fontWeight:
-              "bold",
-
-            marginTop: 12,
-          }}
-        >
-          {formatTime(
-            todayProgress
-          )}
-        </Text>
-
-        {/* BAR */}
-
-        <View
-          style={{
-            height: 10,
-
-            backgroundColor:
-              "#1F2937",
-
-            borderRadius:
-              999,
-
-            overflow:
-              "hidden",
-
-            marginTop: 20,
-          }}
-        >
-          <View
-            style={{
-              width: `${
-                progress *
-                100
-              }%`,
-
-              height: "100%",
-
-              backgroundColor:
-                colors.primary,
-            }}
-          />
-        </View>
-
-        <Text
-          style={{
-            color:
-              colors.textSecondary,
-
-            marginTop: 10,
-          }}
-        >
-          {formatTime(
-            todayProgress
-          )}
-          {" / "}
-          {formatTime(
+        <HabitMetricsRow
+            todayTarget={formatTime(
             habit.targetSeconds
-          )}
-        </Text>
-      </Card>
+            )}
+            totalFocused={formatTime(
+            totalFocused
+            )}
+        />
 
-      {/* CLOCK IN */}
+        <HabitProgressRing
+            progress={progress}
+            current={formatTime(
+            todayProgress
+            )}
+            target={formatTime(
+            habit.targetSeconds
+            )}
+        />
 
-      <Pressable
-        onPress={() => {
-        startSession(
-            selectedHabitId
-        );
+  
 
-       navigation.navigate(
-            "TimerScreen"
-        );
-        }}
-        style={{
-          backgroundColor:
-            colors.primary,
+         {/* CLOCK IN */}
 
-          paddingVertical:
-            18,
+    {isCompletedToday ? (
+  <View
+    style={{
+      backgroundColor:
+        colors.success,
 
-          borderRadius:
-            22,
+      paddingVertical:
+        18,
 
-          alignItems:
-            "center",
+      borderRadius: 22,
 
-          marginBottom: 28,
-        }}
-      >
-        <Text
-          style={{
-            color: "#000",
+      alignItems:
+        "center",
 
-            fontSize: 16,
+      marginBottom: 28,
+    }}
+  >
+    <Text
+      style={{
+        color: "#fff",
 
-            fontWeight:
-              "bold",
-          }}
-        >
-          ⏱ Clock In
-        </Text>
-      </Pressable>
+        fontSize: 16,
+
+        fontWeight:
+          "bold",
+      }}
+    >
+      ✅ Completed Today
+    </Text>
+  </View>
+) : (
+  <Pressable
+    onPress={() => {
+      startSession(
+        selectedHabitId
+      );
+
+      navigation.navigate(
+        "TimerScreen"
+      );
+    }}
+    style={{
+      backgroundColor:
+        colors.primary,
+
+      paddingVertical:
+        18,
+
+      borderRadius:
+        22,
+
+      alignItems:
+        "center",
+
+      marginBottom: 28,
+    }}
+  >
+    <Text
+      style={{
+        color: "#000",
+
+        fontSize: 16,
+
+        fontWeight:
+          "bold",
+      }}
+    >
+      ⏱ Clock In
+    </Text>
+  </Pressable>
+)}
 
       {/* HISTORY */}
-
-      <Text
-        style={{
-          color:
-            colors.text,
-
-          fontSize: 22,
-
-          fontWeight:
-            "bold",
-
-          marginBottom: 14,
-        }}
-      >
-        History
-      </Text>
-
-      {history
-        .slice(0, 10)
-        .map((session) => (
-          <Card
-            key={
-              session.id
-            }
-            style={{
-              marginBottom:
-                12,
-            }}
-          >
-            <Text
-              style={{
-                color:
-                  colors.text,
-              }}
-            >
-              {new Date(
-                session.createdAt
-              ).toLocaleDateString()}
-            </Text>
-
-            <Text
-              style={{
-                color:
-                  colors.textSecondary,
-
-                marginTop:
-                  4,
-              }}
-            >
-              {formatTime(
-                session.durationSeconds
-              )}
-            </Text>
-          </Card>
-        ))}
+      <SessionHistoryList
+        sessions={history}
+      />
     </ScreenLayout>
   );
 }

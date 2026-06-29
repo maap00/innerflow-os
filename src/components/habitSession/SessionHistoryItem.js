@@ -1,9 +1,10 @@
-import { Text } from "react-native";
+import { View, Text } from "react-native";
 import Card from "../ui/Card";
+import { colors } from "../../theme/colors";
+import { formatTime } from "../../helpers/time";
 
 export default function SessionHistoryItem({
   session,
-  duration,
 }) {
   return (
     <Card
@@ -11,14 +12,27 @@ export default function SessionHistoryItem({
         marginBottom: 12,
       }}
     >
-      <Text>
+      <Text
+        style={{
+          color: colors.text,
+          fontWeight: "600",
+        }}
+      >
         {new Date(
           session.createdAt
         ).toLocaleDateString()}
       </Text>
 
-      <Text>
-        {duration}
+      <Text
+        style={{
+          color:
+            colors.textSecondary,
+          marginTop: 4,
+        }}
+      >
+        {formatTime(
+          session.durationSeconds
+        )}
       </Text>
     </Card>
   );
