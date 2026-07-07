@@ -5,7 +5,7 @@ import { getLastResetTime } from "../helpers/timeWindow";
 
 import {
   getStageAchievement,
-} from "../helpers/achievements";
+} from "../helpers/milestones";
 
 // =========================
 // ⚙️ CONFIG
@@ -146,6 +146,7 @@ addHabit: (name, config) =>
       lastCompletedAt: null,
 
       streak: 0,
+      milestones: [],
     };
 
     const updated = [
@@ -179,6 +180,20 @@ addHabit: (name, config) =>
             newDay
           );
 
+        const currentMilestones =
+          h.milestones || [];
+
+        const updatedMilestones =
+          achievement &&
+          !currentMilestones.includes(
+            achievement.id
+          )
+            ? [
+                ...currentMilestones,
+                achievement.id,
+              ]
+            : currentMilestones;
+
         const s1 = h.stageConfig.stage1;
         const s2 = h.stageConfig.stage2;
         const s3 = h.stageConfig.stage3;
@@ -207,6 +222,8 @@ addHabit: (name, config) =>
           currentDay: newDay,
           stage: newStage,
           totalDays,
+          milestones:
+            updatedMilestones,
           lastCompletedAt: now,
         };
       });

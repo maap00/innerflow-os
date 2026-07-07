@@ -12,6 +12,9 @@ import { formatTime } from "../../helpers/time";
 
 import { getLastResetTime } from "../../helpers/timeWindow";
 
+import HabitBadgeRow
+from "./HabitBadgeRow";
+
 export default function HabitCard({
   habit,
   progress,
@@ -26,12 +29,9 @@ export default function HabitCard({
     habit.totalDays || 30;
 
   const progressPercent =
-    habit.validationType === "time"
-      ? Math.min(
-          progress / habit.targetSeconds,
-          1
-        )
-      : habit.currentDay / total;
+  habit.validationType === "time"
+    ? progress
+    : habit.currentDay / total;
 
   // =========================
   // 🔒 LOCK
@@ -83,6 +83,8 @@ export default function HabitCard({
   // 🎨 UI
   // =========================
 
+
+
   return (
     <Card
       style={{
@@ -110,97 +112,59 @@ export default function HabitCard({
           justifyContent:
             "space-between",
 
-          alignItems: "center",
+          // alignItems: "center",
 
           marginBottom: 14,
         }}
       >
         {/* LEFT */}
 
-        <View>
+         
           <Text
             style={{
               color:
                 colors.textSecondary,
 
-              fontSize: 12,
+              fontSize: 22,
             }}
           >
-            🔥 {habit.currentDay}/
+            {habit.currentDay}/
             {total} días
           </Text>
 
-          <Text
+        <View>
+
+          
+        
+
+           <Text
             style={{
               color:
                 stage.accent,
 
-              marginTop: 4,
+          
 
               fontSize: 13,
 
               fontWeight: "600",
+               marginBottom: 14,
             }}
           >
             {stage.label}
           </Text>
+
+
+
+          <HabitBadgeRow
+            milestones={habit.milestones}
+          />
+
+          
+
+        
         </View>
 
-        {/* BADGES */}
-
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 8,
-          }}
-        >
-          {isHighStreak && (
-            <View
-              style={{
-                backgroundColor:
-                  "rgba(74,222,128,0.15)",
-
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-
-                borderRadius: 20,
-              }}
-            >
-              <Text
-                style={{
-                  color:
-                    colors.primary,
-
-                  fontSize: 12,
-
-                  fontWeight: "bold",
-                }}
-              >
-                🔥 STREAK
-              </Text>
-            </View>
-          )}
-
-          {habit.stage === 2 && (
-            <Text
-              style={{
-                fontSize: 20,
-              }}
-            >
-              🥈
-            </Text>
-          )}
-
-          {habit.stage === 3 && (
-            <Text
-              style={{
-                fontSize: 20,
-              }}
-            >
-              🥇
-            </Text>
-          )}
-        </View>
+     
       </View>
 
       {/* 🏷️ NAME */}
@@ -213,11 +177,13 @@ export default function HabitCard({
 
           fontWeight: "bold",
 
-          marginBottom: 14,
+         
         }}
       >
         {habit.name}
       </Text>
+
+       
 
       {/* ⏱️ TIME HABIT */}
 

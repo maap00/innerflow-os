@@ -45,17 +45,19 @@ export default function Dashboard() {
     const navigation =
   useNavigation();
 
+
+
   return (
     <ScreenLayout>
       <DashboardHero />
 
-      <DailySummaryCard
+      {/* <DailySummaryCard
         todayTotal={todayTotal}
         totalTarget={
           totalTarget
         }
         streak={streak}
-      />
+      /> */}
 
       <Text
         style={{
@@ -76,7 +78,7 @@ export default function Dashboard() {
         const progress =
           getHabitProgress(
             sessions,
-            habit.id
+            habit
           );
 
         return (
