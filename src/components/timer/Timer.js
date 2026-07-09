@@ -1,28 +1,24 @@
-import React, { useEffect } from "react";
-import { View, Text } from "react-native";
+import React, { useEffect, useMemo, useCallback } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { Button } from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
 
 import { useSessionStore } from "../../store/useSessionStore";
-import CircularTimer from "./CircularTimer";
 import { colors } from "../../theme/colors";
-import {
-  useNavigation,
-} from "@react-navigation/native";
+import CircularTimer from "./CircularTimer";
 
 export default function Timer() {
-  const {
-    currentSession,
-    startSession,
-    pauseSession,
-    resumeSession,
-    stopSession,
-    tick,
-    habits,
-    selectedHabitId,
-  } = useSessionStore();
+  const navigation = useNavigation();
 
-  const navigation =
-  useNavigation();
+  // Zustand Selectors (Optimized to prevent unnecessary re-renders)
+  const currentSession = useSessionStore((state) => state.currentSession);
+  const startSession = useSessionStore((state) => state.startSession);
+  const pauseSession = useSessionStore((state) => state.pauseSession);
+  const resumeSession = useSessionStore((state) => state.resumeSession);
+  const stopSession = useSessionStore((state) => state.stopSession);
+  const tick = useSessionStore((state) => state.tick);
+  const habits = useSessionStore((state) => state.habits);
+  const selectedHabitId = useSessionStore((state) => state.selectedHabitId);
 
   // ⏱️ Tick loop
   useEffect(() => {
@@ -35,42 +31,36 @@ export default function Timer() {
     }
 
     return () => clearInterval(interval);
-  }, [currentSession?.active]);
+  }, [currentSession?.active, tick]);
 
-  const selectedHabit = habits.find(
-    (h) => h.id === selectedHabitId
-  );
+  // Derived State
+  const selectedHabit = useMemo(() => {
+    return habits.find((h) => h.id === selectedHabitId);
+  }, [habits, selectedHabitId]);
+
+  // Handlers
+  const handleStart = useCallback(() => {
+    if (selectedHabitId) {
+      startSession(selectedHabitId);
+    }
+  }, [selectedHabitId, startSession]);
+
+  const handleStop = useCallback(() => {
+    navigation.goBack();
+    stopSession();
+  }, [stopSession, navigation]);
 
   return (
-    <View
-      style={{
-        alignItems: "center",
-        justifyContent: "center",
-        marginVertical: 20,
-      }}
-    >
+    <View style={styles.container}>
       {/* 🎯 Hábito activo */}
       {selectedHabit && (
-        <Text
-          style={{
-            color: colors.primary,
-            marginBottom: 10,
-            fontSize: 14,
-          }}
-        >
+        <Text style={styles.habitTitle}>
           🎯 {selectedHabit.name}
         </Text>
       )}
 
       {/* 🔵 TIMER CIRCULAR */}
-      <View
-        style={{
-          shadowColor: colors.primary,
-          shadowOpacity: 0.4,
-          shadowRadius: 20,
-          shadowOffset: { width: 0, height: 10 },
-        }}
-      >
+      <View style={styles.timerWrapper}>
         <CircularTimer
           duration={currentSession?.duration || 0}
           target={currentSession?.targetSeconds || 1500}
@@ -78,23 +68,15 @@ export default function Timer() {
       </View>
 
       {/* 🎮 CONTROLES */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-around",
-          marginTop: 24,
-          width: "100%",
-          paddingHorizontal: 20,
-        }}
-      >
+      <View style={styles.controlsRow}>
         {/* ▶️ START */}
         {!currentSession && selectedHabitId && (
           <Button
             mode="contained"
-            onPress={() => startSession(selectedHabitId)}
+            onPress={handleStart}
             buttonColor={colors.primary}
             textColor="#000"
-            style={{ borderRadius: 12 }}
+            style={styles.primaryButton}
           >
             ▶️ Empezar
           </Button>
@@ -114,7 +96,7 @@ export default function Timer() {
             onPress={resumeSession}
             buttonColor={colors.primary}
             textColor="#000"
-            style={{ borderRadius: 12 }}
+            style={styles.primaryButton}
           >
             Reanudar
           </Button>
@@ -122,19 +104,44 @@ export default function Timer() {
 
         {/* ⛔ STOP */}
         {currentSession && (
-         <Button
-          mode="text"
-          onPress={() => {
-            stopSession();
-
-            navigation.goBack();
-          }}
-          textColor="#ef4444"
+          <Button
+            mode="text"
+            onPress={handleStop}
+            textColor="#ef4444"
           >
-          Finalizar
-         </Button>
+            Finalizar
+          </Button>
         )}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 20,
+  },
+  habitTitle: {
+    color: colors.primary,
+    marginBottom: 10,
+    fontSize: 14,
+  },
+  timerWrapper: {
+    shadowColor: colors.primary,
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  controlsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 24,
+    width: "100%",
+    paddingHorizontal: 20,
+  },
+  primaryButton: {
+    borderRadius: 12,
+  },
+});

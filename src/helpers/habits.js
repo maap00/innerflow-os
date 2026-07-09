@@ -46,18 +46,8 @@ export const getHabitProgress = (
         0
       );
 
-      console.log("Habit:", habit.name);
 
-console.log("Target:", habit.targetSeconds);
 
-console.log("Sessions:", sessions);
-
-console.log("Today Seconds:", todaySeconds);
-
-console.log(
-  "Progress:",
-  todaySeconds / habit.targetSeconds
-);
 
   return Math.min(
     todaySeconds /

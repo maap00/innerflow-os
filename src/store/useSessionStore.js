@@ -1,52 +1,18 @@
-import { create } from "zustand";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { create } from "zustand";
+
 import { getLevelData } from "../helpers/level";
+import { getStageAchievement } from "../helpers/milestones";
 import { getLastResetTime } from "../helpers/timeWindow";
 
-import {
-  getStageAchievement,
-} from "../helpers/milestones";
-
 // =========================
-// ⚙️ CONFIG
+// ⚙️ CONFIG & CONSTANTS
 // =========================
 const MIN_VALID_SECONDS = 60;
 const MIN_PROGRESS_RATIO = 0.6;
-const migrateSessions = (
-  sessions = []
-) => {
-  return sessions.map((s) => ({
-    id:
-      s.id ??
-      Date.now().toString(),
 
-    habitId: s.habitId,
-
-    startedAt:
-      s.startedAt ??
-      s.startTime ??
-      Date.now(),
-
-    endedAt:
-      s.endedAt ??
-      s.endTime ??
-      Date.now(),
-
-    durationSeconds:
-      s.durationSeconds ??
-      s.duration ??
-      0,
-
-    createdAt:
-      s.createdAt ??
-      Date.now(),
-
-    isValid:
-      s.isValid ?? true,
-  }));
-};
 // =========================
-// 💾 STORAGE HELPERS
+// 💾 STORAGE & UTILITY HELPERS
 // =========================
 const saveData = async (key, data) => {
   await AsyncStorage.setItem(key, JSON.stringify(data));
@@ -55,6 +21,18 @@ const saveData = async (key, data) => {
 const loadData = async (key) => {
   const data = await AsyncStorage.getItem(key);
   return data ? JSON.parse(data) : null;
+};
+
+const migrateSessions = (sessions = []) => {
+  return sessions.map((s) => ({
+    id: s.id ?? Date.now().toString(),
+    habitId: s.habitId,
+    startedAt: s.startedAt ?? s.startTime ?? Date.now(),
+    endedAt: s.endedAt ?? s.endTime ?? Date.now(),
+    durationSeconds: s.durationSeconds ?? s.duration ?? 0,
+    createdAt: s.createdAt ?? Date.now(),
+    isValid: s.isValid ?? true,
+  }));
 };
 
 // =========================
@@ -71,7 +49,7 @@ export const useSessionStore = create((set, get) => ({
   achievements: [],
 
   // =========================
-  // 🔄 LOAD + MIGRACIÓN
+  // 🔄 LOAD & MIGRATION
   // =========================
   loadInitialData: async () => {
     const sessions = await loadData("sessions");
@@ -79,10 +57,7 @@ export const useSessionStore = create((set, get) => ({
     const streak = await loadData("streak");
     const points = await loadData("points");
     const balance = await loadData("balance");
-    const achievements =
-    await loadData(
-      "achievements"
-    );
+    const achievements = await loadData("achievements");
 
     const migratedHabits = habits.map((h) => ({
       validationType: "time",
@@ -99,68 +74,49 @@ export const useSessionStore = create((set, get) => ({
     }));
 
     set({
-      sessions:
-      migrateSessions(
-        sessions || []
-      ),
+      sessions: migrateSessions(sessions || []),
       habits: migratedHabits,
       streak: streak || 0,
       points: points || 0,
       balance: balance || 0,
-      achievements:
-      achievements || [],
+      achievements: achievements || [],
     });
   },
 
   // =========================
   // 🎯 HABITS
   // =========================
-addHabit: (name, config) =>
-  set((state) => {
-    const stageConfig = config.stageConfig;
+  addHabit: (name, config) =>
+    set((state) => {
+      const stageConfig = config.stageConfig;
+      const totalDays = stageConfig.stage1;
 
-    const totalDays =
-      stageConfig.stage1;
+      const newHabit = {
+        id: Date.now().toString(),
+        name,
+        validationType: config.validationType,
+        targetSeconds:
+          config.validationType === "time"
+            ? config.targetMinutes * 60
+            : null,
+        currentDay: 0,
+        stage: 1,
+        totalDays,
+        stageConfig,
+        lastCompletedAt: null,
+        streak: 0,
+        milestones: [],
+      };
 
-    const newHabit = {
-      id: Date.now().toString(),
+      const updated = [...state.habits, newHabit];
+      saveData("habits", updated);
 
-      name,
+      return {
+        habits: updated,
+      };
+    }),
 
-      validationType:
-        config.validationType,
-
-      targetSeconds:
-        config.validationType === "time"
-          ? config.targetMinutes * 60
-          : null,
-
-      currentDay: 0,
-
-      stage: 1,
-
-      totalDays,
-
-      stageConfig,
-
-      lastCompletedAt: null,
-
-      streak: 0,
-      milestones: [],
-    };
-
-    const updated = [
-      ...state.habits,
-      newHabit,
-    ];
-
-    saveData("habits", updated);
-
-    return {
-      habits: updated,
-    };
-  }),
-  // 👉 SOLO PARA HÁBITOS MANUALES
+  // 👉 ONLY FOR MANUAL HABITS
   completeHabit: (habitId) =>
     set((state) => {
       const now = Date.now();
@@ -174,24 +130,12 @@ addHabit: (name, config) =>
         }
 
         const newDay = h.currentDay + 1;
-
-        const achievement =
-          getStageAchievement(
-            newDay
-          );
-
-        const currentMilestones =
-          h.milestones || [];
+        const achievement = getStageAchievement(newDay);
+        const currentMilestones = h.milestones || [];
 
         const updatedMilestones =
-          achievement &&
-          !currentMilestones.includes(
-            achievement.id
-          )
-            ? [
-                ...currentMilestones,
-                achievement.id,
-              ]
+          achievement && !currentMilestones.includes(achievement.id)
+            ? [...currentMilestones, achievement.id]
             : currentMilestones;
 
         const s1 = h.stageConfig.stage1;
@@ -212,9 +156,7 @@ addHabit: (name, config) =>
         }
 
         if (achievement) {
-          get().unlockAchievement(
-            achievement
-          );
+          get().unlockAchievement(achievement);
         }
 
         return {
@@ -222,123 +164,66 @@ addHabit: (name, config) =>
           currentDay: newDay,
           stage: newStage,
           totalDays,
-          milestones:
-            updatedMilestones,
+          milestones: updatedMilestones,
           lastCompletedAt: now,
         };
       });
 
       saveData("habits", updated);
-
       return { habits: updated };
     }),
 
   selectHabit: (id) => set({ selectedHabitId: id }),
 
-  addSession: ({
-  habitId,
-  startedAt,
-  endedAt,
-  durationSeconds,
-}) =>
-  set((state) => {
-    const newSession = {
-      id:
-        Date.now().toString(),
+  addSession: ({ habitId, startedAt, endedAt, durationSeconds }) =>
+    set((state) => {
+      const newSession = {
+        id: Date.now().toString(),
+        habitId,
+        startedAt,
+        endedAt,
+        durationSeconds,
+        createdAt: Date.now(),
+        isValid: true,
+      };
 
-      habitId,
+      const updatedSessions = [...state.sessions, newSession];
+      saveData("sessions", updatedSessions);
 
-      startedAt,
+      return {
+        sessions: updatedSessions,
+      };
+    }),
 
-      endedAt,
-
-      durationSeconds,
-
-      createdAt:
-        Date.now(),
-
-      isValid: true,
-    };
-
-    const updatedSessions =
-      [
-        ...state.sessions,
-        newSession,
-      ];
-
-    saveData(
-      "sessions",
-      updatedSessions
-    );
-
-    return {
-      sessions:
-        updatedSessions,
-    };
-  }),
-
-  checkHabitCompletion:
-  (habitId) => {
+  checkHabitCompletion: (habitId) => {
     const state = get();
+    const habit = state.habits.find((h) => h.id === habitId);
 
-    const habit =
-      state.habits.find(
-        (h) =>
-          h.id === habitId
-      );
-
-    if (
-      !habit ||
-      habit.validationType !==
-        "time"
-    ) {
+    if (!habit || habit.validationType !== "time") {
       return;
     }
 
-    const lastReset =
-      getLastResetTime();
-
+    const lastReset = getLastResetTime();
     const completedToday =
-      habit.lastCompletedAt &&
-      habit.lastCompletedAt >
-        lastReset;
+      habit.lastCompletedAt && habit.lastCompletedAt > lastReset;
 
     if (completedToday) {
       return;
     }
 
-    const today =
-      new Date();
-
-    const todaySeconds =
-      state.sessions
-        .filter((s) => {
-          const date =
-            new Date(
-              s.createdAt
-            );
-
-          return (
-            s.habitId ===
-              habitId &&
-            date.toDateString() ===
-              today.toDateString()
-          );
-        })
-        .reduce(
-          (sum, s) =>
-            sum +
-            s.durationSeconds,
-          0
+    const today = new Date();
+    const todaySeconds = state.sessions
+      .filter((s) => {
+        const date = new Date(s.createdAt);
+        return (
+          s.habitId === habitId &&
+          date.toDateString() === today.toDateString()
         );
+      })
+      .reduce((sum, s) => sum + s.durationSeconds, 0);
 
-    if (
-      todaySeconds >=
-      habit.targetSeconds
-    ) {
-      state.completeHabit(
-        habitId
-      );
+    if (todaySeconds >= habit.targetSeconds) {
+      state.completeHabit(habitId);
     }
   },
 
@@ -361,20 +246,26 @@ addHabit: (name, config) =>
     }),
 
   pauseSession: () =>
-    set((state) => ({
-      currentSession: {
-        ...state.currentSession,
-        active: false,
-      },
-    })),
+    set((state) => {
+      if (!state.currentSession) return {};
+      return {
+        currentSession: {
+          ...state.currentSession,
+          active: false,
+        },
+      };
+    }),
 
   resumeSession: () =>
-    set((state) => ({
-      currentSession: {
-        ...state.currentSession,
-        active: true,
-      },
-    })),
+    set((state) => {
+      if (!state.currentSession) return {};
+      return {
+        currentSession: {
+          ...state.currentSession,
+          active: true,
+        },
+      };
+    }),
 
   tick: () =>
     set((state) => {
@@ -389,102 +280,51 @@ addHabit: (name, config) =>
     }),
 
   // =========================
-  // 🛑 STOP SESSION (FIXED)
+  // 🛑 STOP SESSION
   // =========================
- stopSession: () =>
-  set((state) => {
-    const session =
-      state.currentSession;
+  stopSession: () =>
+    set((state) => {
+      const session = state.currentSession;
+      if (!session) {
+        return {};
+      }
 
-    if (!session) {
-      return {};
-    }
+      const duration = session.duration;
+      const target = session.targetSeconds;
 
-    const duration =
-      session.duration;
+      const isValid =
+        duration >= MIN_VALID_SECONDS &&
+        (!target || duration / target >= MIN_PROGRESS_RATIO);
 
-    const target =
-      session.targetSeconds;
+      const newSession = {
+        id: Date.now().toString(),
+        habitId: session.habitId,
+        startedAt: session.startTime,
+        endedAt: Date.now(),
+        durationSeconds: duration,
+        createdAt: Date.now(),
+        isValid,
+      };
 
-    const isValid =
-      duration >=
-        MIN_VALID_SECONDS &&
-      (!target ||
-        duration / target >=
-          MIN_PROGRESS_RATIO);
+      const updatedSessions = [...state.sessions, newSession];
+      const earnedPoints = isValid ? Math.floor(duration / 60) : 0;
+      const newPoints = state.points + earnedPoints;
+      const newBalance = state.balance + earnedPoints;
 
-    const newSession = {
-      id:
-        Date.now().toString(),
+      // Batch storage saves
+      Promise.all([
+        saveData("sessions", updatedSessions),
+        saveData("points", newPoints),
+        saveData("balance", newBalance),
+      ]).catch((err) => console.error("Failed to save session data:", err));
 
-      habitId:
-        session.habitId,
-
-      startedAt:
-        session.startTime,
-
-      endedAt:
-        Date.now(),
-
-      durationSeconds:
-        duration,
-
-      createdAt:
-        Date.now(),
-
-      isValid,
-    };
-
-    const updatedSessions =
-      [
-        ...state.sessions,
-        newSession,
-      ];
-
-    const earnedPoints =
-      isValid
-        ? Math.floor(
-            duration / 60
-          )
-        : 0;
-
-    const newPoints =
-      state.points +
-      earnedPoints;
-
-    const newBalance =
-      state.balance +
-      earnedPoints;
-
-    saveData(
-      "sessions",
-      updatedSessions
-    );
-
-    saveData(
-      "points",
-      newPoints
-    );
-
-    saveData(
-      "balance",
-      newBalance
-    );
-
-    return {
-      sessions:
-        updatedSessions,
-
-      currentSession:
-        null,
-
-      points:
-        newPoints,
-
-      balance:
-        newBalance,
-    };
-  }),
+      return {
+        sessions: updatedSessions,
+        currentSession: null,
+        points: newPoints,
+        balance: newBalance,
+      };
+    }),
 
   // =========================
   // 🏆 LEVEL
@@ -498,62 +338,42 @@ addHabit: (name, config) =>
   // 🧹 RESET
   // =========================
   resetSessions: () => {
-    saveData("sessions", []);
-    saveData("streak", 0);
+    Promise.all([
+      saveData("sessions", []),
+      saveData("streak", 0),
+    ]).catch((err) => console.error("Failed to reset sessions:", err));
 
     set({
       sessions: [],
       streak: 0,
     });
-
-   
-    
   },
 
-   saveAchievements:
-    async (
-      achievements
-    ) => {
-      await saveData(
-        "achievements",
-        achievements
-      );
-    },
-
-  unlockAchievement:
-  (achievement) =>
+  // =========================
+  // 🏆 ACHIEVEMENTS
+  // =========================
+  unlockAchievement: (achievement) =>
     set((state) => {
+      const alreadyUnlocked = state.achievements.some(
+        (a) => a.id === achievement.id
+      );
 
-      const alreadyUnlocked =
-        state.achievements.some(
-          (a) =>
-            a.id ===
-            achievement.id
-        );
-
-      if (
-        alreadyUnlocked
-      ) {
+      if (alreadyUnlocked) {
         return {};
       }
 
-      const achievements =
-        [
-          ...state.achievements,
-          {
-            ...achievement,
-            unlockedAt:
-              Date.now(),
-          },
-        ];
+      const updatedAchievements = [
+        ...state.achievements,
+        {
+          ...achievement,
+          unlockedAt: Date.now(),
+        },
+      ];
 
-      saveData(
-        "achievements",
-        achievements
-      );
+      saveData("achievements", updatedAchievements);
 
       return {
-        achievements,
+        achievements: updatedAchievements,
       };
     }),
 }));
