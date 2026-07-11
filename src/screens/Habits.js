@@ -18,6 +18,8 @@ import { getHabitProgress } from "../helpers/habits";
 
 import { colors } from "../theme/colors";
 
+import EditHabitList from "../components/habits/EditHabitList";
+
 export default function Habits() {
   const navigation = useNavigation();
 
@@ -29,6 +31,10 @@ export default function Habits() {
   } = useSessionStore();
 
   const activeHabits = habits.length;
+
+  const handleEdit = (habit) => {
+      console.log("Edit:", habit.name);
+    };
 
   return (
     <View
@@ -120,62 +126,12 @@ export default function Habits() {
           </View>
         </Card>
 
-        {/* 🎯 HABITS */}
-        {habits.length === 0 ? (
-          <Card
-            style={{
-              alignItems: "center",
-              paddingVertical: 40,
-            }}
-          >
-            <Feather
-              name="target"
-              size={42}
-              color={colors.primary}
-            />
+        <EditHabitList
+            habits={habits}
+            onEdit={handleEdit}
+        />
 
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: 20,
-                fontWeight: "bold",
-                marginTop: 14,
-              }}
-            >
-              No hay hábitos
-            </Text>
-
-            <Text
-              style={{
-                color: colors.textSecondary,
-                marginTop: 8,
-                textAlign: "center",
-                lineHeight: 22,
-              }}
-            >
-              Empezá creando tu primer sistema
-              {"\n"}
-              de disciplina.
-            </Text>
-          </Card>
-        ) : (
-          habits.map((h) => {
-            const progress = getHabitProgress(
-              sessions,
-              h.id
-            );
-
-            return (
-              <HabitCard
-                key={h.id}
-                habit={h}
-                progress={progress}
-                onSelect={() => selectHabit(h.id)}
-                onComplete={() => completeHabit(h.id)}
-              />
-            );
-          })
-        )}
+      
       </ScrollView>
 
       {/* ➕ FAB */}

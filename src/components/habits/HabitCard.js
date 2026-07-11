@@ -18,6 +18,7 @@ from "./HabitBadgeRow";
 export default function HabitCard({
   habit,
   progress,
+  todaySeconds,
   onStartFocus,
   onComplete,
 }) {
@@ -29,9 +30,7 @@ export default function HabitCard({
     habit.totalDays || 30;
 
   const progressPercent =
-  habit.validationType === "time"
-    ? progress
-    : habit.currentDay / total;
+  progress;
 
   // =========================
   // 🔒 LOCK
@@ -198,7 +197,7 @@ export default function HabitCard({
               marginBottom: 10,
             }}
           >
-            ⏱️ {formatTime(progress)} /{" "}
+            ⏱️ {formatTime(todaySeconds)} /{" "}
             {formatTime(
               habit.targetSeconds
             )}

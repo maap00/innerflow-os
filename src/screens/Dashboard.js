@@ -8,6 +8,7 @@ import ScreenLayout from "../components/layout/ScreenLayout";
 import { getHabitProgress } from "../helpers/habits";
 import { getTodayTotal, getTotalTargetToday } from "../helpers/metrics";
 import { useSessionStore } from "../store/useSessionStore";
+import { getHabitTodayProgress } from "../helpers/habitProgress";
 
 export default function Dashboard() {
   const navigation = useNavigation();
@@ -45,16 +46,24 @@ export default function Dashboard() {
       <Text style={styles.title}>Today Tasks</Text>
 
       {habits.map((habit) => {
-        const progress = getHabitProgress(sessions, habit);
+       const {
+          progress,
+          todaySeconds,
+        } =
+          getHabitTodayProgress(
+            sessions,
+            habit
+          );
 
         return (
-          <HabitCard
-            key={habit.id}
-            habit={habit}
-            progress={progress}
-            onStartFocus={() => handleStartFocus(habit.id)}
-            onComplete={() => handleComplete(habit.id)}
-          />
+        <HabitCard
+          key={habit.id}
+          habit={habit}
+          progress={progress}
+          todaySeconds={todaySeconds}
+          onStartFocus={() => handleStartFocus(habit.id)}
+          onComplete={() => handleComplete(habit.id)}
+        />
         );
       })}
     </ScreenLayout>

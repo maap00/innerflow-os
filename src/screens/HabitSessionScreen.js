@@ -15,6 +15,9 @@ import {
 } from "../helpers/sessions";
 import { useSessionStore } from "../store/useSessionStore";
 import { colors } from "../theme/colors";
+import {
+  getHabitTodayProgress,
+} from "../helpers/habitProgress";
 
 export default function HabitSessionScreen() {
   const navigation = useNavigation();
@@ -31,10 +34,22 @@ export default function HabitSessionScreen() {
     return habits.find((h) => h.id === selectedHabitId);
   }, [habits, selectedHabitId]);
 
-  const todayProgress = useMemo(() => {
-    if (!habit) return 0;
-    return getTodayHabitProgress(sessions, habit.id);
-  }, [sessions, habit]);
+  const {
+    todaySeconds,
+    progress,
+    } = useMemo(() => {
+      if (!habit) {
+        return {
+          todaySeconds: 0,
+          progress: 0,
+        };
+      }
+
+      return getHabitTodayProgress(
+        sessions,
+        habit
+      );
+    }, [sessions, habit]);
 
   const totalFocused = useMemo(() => {
     if (!habit) return 0;
@@ -46,15 +61,18 @@ export default function HabitSessionScreen() {
     return getHabitHistory(sessions, habit.id);
   }, [sessions, habit]);
 
-  const progress = useMemo(() => {
-    if (!habit || !habit.targetSeconds) return 0;
-    return Math.min(todayProgress / habit.targetSeconds, 1);
-  }, [habit, todayProgress]);
+  // const progress = useMemo(() => {
+  //   if (!habit || !habit.targetSeconds) return 0;
+  //   return Math.min(todayProgress / habit.targetSeconds, 1);
+  // }, [habit, todayProgress]);
 
-  const isCompletedToday = useMemo(() => {
+ const isCompletedToday = useMemo(() => {
     if (!habit || !habit.targetSeconds) return false;
-    return todayProgress >= habit.targetSeconds;
-  }, [habit, todayProgress]);
+
+    return (
+      todaySeconds >= habit.targetSeconds
+    );
+  }, [habit, todaySeconds]);
 
   // Auto-complete check on screen focus
   useFocusEffect(
@@ -87,10 +105,10 @@ export default function HabitSessionScreen() {
       />
 
       <HabitProgressRing
-        progress={progress}
-        current={formatTime(todayProgress)}
-        target={formatTime(habit.targetSeconds || 0)}
-      />
+      progress={progress}
+      current={formatTime(todaySeconds)}
+      target={formatTime(habit.targetSeconds)}
+    />
 
       {/* CLOCK IN */}
       {isCompletedToday ? (
