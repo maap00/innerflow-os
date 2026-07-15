@@ -60,18 +60,45 @@ export const useSessionStore = create((set, get) => ({
     const achievements = await loadData("achievements");
 
     const migratedHabits = habits.map((h) => ({
-      validationType: "time",
-      totalDays: 30,
-      stage: 1,
-      currentDay: 0,
-      stageConfig: {
-        stage1: 30,
-        stage2: 30,
-        stage3: 30,
-      },
-      lastCompletedAt: null,
-      ...h,
-    }));
+    validationType: "time",
+
+    totalDays: 30,
+
+    stage: 1,
+
+    currentDay: 0,
+
+    stageConfig: {
+      stage1: 30,
+      stage2: 30,
+      stage3: 30,
+    },
+
+    lastCompletedAt: null,
+
+    // NUEVO
+    category: "mental",
+
+    // Preparado para el futuro
+    skills: ["mental"],
+
+    // Mantener datos existentes
+    ...h,
+
+    // Si el hábito ya tiene categoría, conservarla
+    category:
+      h.category ??
+      "mental",
+
+    // Si en el futuro ya existe skills, conservarlo.
+    // Si no, generarlo a partir de category.
+    skills:
+      h.skills ??
+      [
+        h.category ??
+          "mental",
+      ],
+  }));
 
     set({
       sessions: migrateSessions(sessions || []),
@@ -95,6 +122,11 @@ export const useSessionStore = create((set, get) => ({
         id: Date.now().toString(),
         name,
         validationType: config.validationType,
+        category:
+        config.category,
+        skills: [
+          config.category,
+        ],
         targetSeconds:
           config.validationType === "time"
             ? config.targetMinutes * 60

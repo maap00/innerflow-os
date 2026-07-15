@@ -19,6 +19,8 @@ import CustomTabBar from "./CustomTabBar";
 import HabitSessionScreen
 from "../screens/HabitSessionScreen";
 
+import BadgesScreen from "../screens/BadgesScreen";
+
 const Stack = createNativeStackNavigator();
 
 const Tab = createBottomTabNavigator();
@@ -87,6 +89,11 @@ export default function AppNavigator() {
       options={{
         headerShown: false,
       }}
+    />
+
+    <Stack.Screen
+      name="Badges"
+      component={BadgesScreen}
     />
     </Stack.Navigator>
   );

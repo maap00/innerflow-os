@@ -18,6 +18,10 @@ import { colors } from "../theme/colors";
 
 import { useSessionStore } from "../store/useSessionStore";
 
+import {
+  getAllCategories,
+} from "../helpers/categories";
+
 export default function CreateHabits() {
   const navigation = useNavigation();
 
@@ -39,6 +43,11 @@ export default function CreateHabits() {
 
   const [mode, setMode] = useState("custom");
 
+  const [
+  category,
+  setCategory,
+] = useState("mental");
+
   const [stage1, setStage1] = useState("30");
   const [stage2, setStage2] = useState("30");
   const [stage3, setStage3] = useState("30");
@@ -59,6 +68,7 @@ export default function CreateHabits() {
 
     const config = {
       validationType,
+      category,
 
       targetMinutes:
         validationType === "time"
@@ -306,6 +316,78 @@ export default function CreateHabits() {
                 Manual
               </Text>
             </Pressable>
+          </View>
+        </Card>
+
+        <Card>
+          <Text
+            style={{
+              color: colors.text,
+              marginBottom: 16,
+              fontWeight: "600",
+            }}
+          >
+            Categoría
+          </Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 12,
+            }}
+          >
+            {getAllCategories().map(
+              (item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    setCategory(item.id)
+                  }
+                  style={{
+                    flex: 1,
+
+                    paddingVertical: 16,
+
+                    borderRadius: 16,
+
+                    alignItems: "center",
+
+                    backgroundColor:
+                      category === item.id
+                        ? "rgba(74,222,128,0.15)"
+                        : "#111827",
+
+                    borderWidth: 1,
+
+                    borderColor:
+                      category === item.id
+                        ? colors.primary
+                        : "transparent",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 24,
+                    }}
+                  >
+                    {item.icon}
+                  </Text>
+
+                  <Text
+                    style={{
+                      marginTop: 8,
+
+                      color:
+                        category === item.id
+                          ? colors.primary
+                          : colors.textSecondary,
+                    }}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              )
+            )}
           </View>
         </Card>
 

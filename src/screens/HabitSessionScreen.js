@@ -34,6 +34,7 @@ export default function HabitSessionScreen() {
     return habits.find((h) => h.id === selectedHabitId);
   }, [habits, selectedHabitId]);
 
+
   const {
     todaySeconds,
     progress,
@@ -126,6 +127,7 @@ export default function HabitSessionScreen() {
     </ScreenLayout>
   );
 }
+
 
 const styles = StyleSheet.create({
   completedContainer: {

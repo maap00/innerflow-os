@@ -15,6 +15,10 @@ import { getLastResetTime } from "../../helpers/timeWindow";
 import HabitBadgeRow
 from "./HabitBadgeRow";
 
+import {
+  getCategory,
+} from "../../helpers/categories";
+
 export default function HabitCard({
   habit,
   progress,
@@ -70,6 +74,11 @@ export default function HabitCard({
 
   const stage =
     getStageData();
+
+  const category =
+    getCategory(
+      habit.category
+    );
 
   // =========================
   // 🔥 STREAK
@@ -180,6 +189,17 @@ export default function HabitCard({
         }}
       >
         {habit.name}
+      </Text>
+
+      <Text
+        style={{
+          color: category.color,
+          marginTop: 6,
+          fontSize: 14,
+          fontWeight: "600",
+        }}
+      >
+        {category.icon} {category.label}
       </Text>
 
        

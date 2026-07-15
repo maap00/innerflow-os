@@ -16,7 +16,14 @@ import ProfileRow from "../components/profile/ProfileRow";
 
 import { colors } from "../theme/colors";
 
+import {
+  useNavigation,
+} from "@react-navigation/native";
+
 export default function Profile() {
+
+  const navigation =
+    useNavigation();
   return (
     <SafeAreaView
       style={{
@@ -113,6 +120,11 @@ export default function Profile() {
           <ProfileRow
             icon="award"
             label="Badges"
+            onPress={() =>
+              navigation.navigate(
+                "Badges"
+              )
+            }
           />
         </ProfileSection>
 

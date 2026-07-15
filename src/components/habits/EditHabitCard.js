@@ -4,11 +4,19 @@ import { Feather } from "@expo/vector-icons";
 
 import Card from "../ui/Card";
 import { colors } from "../../theme/colors";
+import {
+  getCategory,
+} from "../../helpers/categories";
 
 export default function EditHabitCard({
   habit,
   onEdit,
 }) {
+
+    const category =
+    getCategory(
+        habit.category
+    );
   return (
     <Card
       style={{
@@ -33,6 +41,16 @@ export default function EditHabitCard({
           >
             {habit.name}
           </Text>
+          <Text
+            style={{
+                color: category.color,
+                marginTop: 4,
+                fontSize: 13,
+                fontWeight: "600",
+            }}
+            >
+            {category.icon} {category.label}
+            </Text>
 
           <Text
             style={{

@@ -1,5 +1,8 @@
 import { View, Text } from "react-native";
 import { colors } from "../../theme/colors";
+import {
+  getCategory,
+} from "../../helpers/categories";
 
 export default function HabitSessionHeader({
   habit,
@@ -9,6 +12,11 @@ export default function HabitSessionHeader({
     2: "Implementation",
     3: "Integration",
   };
+
+  const category =
+  getCategory(
+    habit.category
+  );
 
   return (
     <View
@@ -28,6 +36,16 @@ export default function HabitSessionHeader({
         }}
       >
         {habit.name}
+      </Text>
+      <Text
+        style={{
+          color: category.color,
+          marginTop: 6,
+          fontSize: 15,
+          fontWeight: "600",
+        }}
+      >
+        {category.icon} {category.label}
       </Text>
 
       <Text
