@@ -12,7 +12,7 @@ import TimerScreen from "../screens/TimerScreen";
 import History from "../screens/History";
 import Profile from "../screens/Profile";
 
-import CreateHabits from "../screens/CreateHabits";
+import CreateHabits from "../screens/CreateHabitScreen";
 
 import CustomTabBar from "./CustomTabBar";
 
@@ -20,6 +20,7 @@ import HabitSessionScreen
 from "../screens/HabitSessionScreen";
 
 import BadgesScreen from "../screens/BadgesScreen";
+import EditHabitScreen from "../screens/EditHabitScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -91,10 +92,15 @@ export default function AppNavigator() {
       }}
     />
 
-    <Stack.Screen
-      name="Badges"
-      component={BadgesScreen}
-    />
+      <Stack.Screen
+        name="Badges"
+        component={BadgesScreen}
+      />
+
+      <Stack.Screen
+        name="EditHabit"
+        component={EditHabitScreen}
+      />
     </Stack.Navigator>
   );
 }

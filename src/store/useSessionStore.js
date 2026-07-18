@@ -148,6 +148,86 @@ export const useSessionStore = create((set, get) => ({
       };
     }),
 
+  updateHabit: (
+    habitId,
+    config
+  ) =>
+    set((state) => {
+      const updated =
+        state.habits.map(
+          (habit) => {
+            if (
+              habit.id !==
+              habitId
+            ) {
+              return habit;
+            }
+
+            return {
+              ...habit,
+
+              name:
+                config.name,
+
+              validationType:
+                config.validationType,
+
+              category:
+                config.category,
+
+              skills: [
+                config.category,
+              ],
+
+              targetSeconds:
+                config.validationType ===
+                "time"
+                  ? config.targetMinutes *
+                    60
+                  : null,
+
+              stageConfig: {
+                stage1:
+                  config.stage1,
+
+                stage2:
+                  config.stage2,
+
+                stage3:
+                  config.stage3,
+              },
+
+              totalDays:
+                config.stage1 +
+                config.stage2 +
+                config.stage3,
+            };
+          }
+        );
+
+      saveData(
+        "habits",
+        updated
+      );
+
+      return {
+        habits: updated,
+      };
+    }),
+
+  deleteHabit: (habitId) =>
+    set((state) => {
+      const habits = state.habits.filter(
+        (habit) => habit.id !== habitId
+      );
+
+      saveData("habits", habits);
+
+      return {
+        habits,
+      };
+    }),
+
   // 👉 ONLY FOR MANUAL HABITS
   completeHabit: (habitId) =>
     set((state) => {

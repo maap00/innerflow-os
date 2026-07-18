@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import Dashboard from "../screens/Dashboard";
 import Focus from "../screens/Focus";
-import CreateHabits from "../screens/CreateHabits";
+import CreateHabits from "../screens/CreateHabitScreen";
 
 const Stack = createNativeStackNavigator();
 

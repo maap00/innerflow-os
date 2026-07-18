@@ -1,76 +1,70 @@
-import React from "react";
 import { View, Text, Pressable } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 import Card from "../ui/Card";
 import { colors } from "../../theme/colors";
-import {
-  getCategory,
-} from "../../helpers/categories";
+import { getCategory } from "../../helpers/categories";
 
-export default function EditHabitCard({
-  habit,
-  onEdit,
-}) {
+export default function EditHabitCard({ habit }) {
+  const navigation = useNavigation();
 
-    const category =
-    getCategory(
-        habit.category
-    );
+  const category = getCategory(habit.category);
+
+  const handleEdit = () => {
+    navigation.navigate("EditHabit", {
+      habitId: habit.id,
+    });
+  };
+
   return (
-    <Card
-      style={{
-        marginBottom: 12,
-      }}
-    >
-      <Pressable
-        onPress={() => onEdit(habit)}
+    <Card>
+      <View
         style={{
           flexDirection: "row",
           justifyContent: "space-between",
           alignItems: "center",
         }}
       >
-        <View>
+        <View style={{ flex: 1 }}>
           <Text
             style={{
               color: colors.text,
               fontSize: 18,
-              fontWeight: "700",
+              fontWeight: "600",
             }}
           >
             {habit.name}
           </Text>
-          <Text
-            style={{
-                color: category.color,
-                marginTop: 4,
-                fontSize: 13,
-                fontWeight: "600",
-            }}
-            >
-            {category.icon} {category.label}
-            </Text>
 
           <Text
             style={{
               color: colors.textSecondary,
-              fontSize: 13,
-              marginTop: 4,
+              marginTop: 6,
             }}
           >
-            {habit.validationType === "time"
-              ? "Time Habit"
-              : "Manual Habit"}
+            {category.icon} {category.label}
           </Text>
         </View>
 
-        <Feather
-          name="edit-2"
-          size={20}
-          color={colors.primary}
-        />
-      </Pressable>
+        <Pressable
+          onPress={handleEdit}
+          style={{
+            paddingHorizontal: 18,
+            paddingVertical: 10,
+            backgroundColor: colors.primary,
+            borderRadius: 12,
+          }}
+        >
+          <Text
+            style={{
+              color: "#000",
+              fontWeight: "600",
+            }}
+          >
+            Edit
+          </Text>
+        </Pressable>
+      </View>
     </Card>
   );
 }
