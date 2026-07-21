@@ -2,6 +2,7 @@ import {
   View,
   Text,
   ScrollView,
+  Alert
 } from "react-native";
 
 import {
@@ -20,10 +21,53 @@ import {
   useNavigation,
 } from "@react-navigation/native";
 
+import {
+  useAuthStore,
+} from "../store/useAuthStore";
+
 export default function Profile() {
+  const signOut =
+    useAuthStore(
+      (state) => state.signOut
+    );
+
+  const loading =
+    useAuthStore(
+      (state) => state.loading
+    );
 
   const navigation =
     useNavigation();
+
+  const handleLogout = () => {
+  Alert.alert(
+    "Logout",
+    "Are you sure you want to logout?",
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+
+        onPress: async () => {
+          const result =
+            await signOut();
+
+          if (!result.success) {
+            Alert.alert(
+              "Error",
+              result.error?.message ||
+                "Could not logout."
+            );
+          }
+        },
+      },
+    ]
+  );
+};
   return (
     <SafeAreaView
       style={{
@@ -143,7 +187,12 @@ export default function Profile() {
 
           <ProfileRow
             icon="log-out"
-            label="Logout"
+            label={
+              loading
+                ? "Logging out..."
+                : "Logout"
+            }
+            onPress={handleLogout}
             destructive
           />
         </ProfileSection>
