@@ -10,6 +10,8 @@ import { getTodayTotal, getTotalTargetToday } from "../helpers/metrics";
 import { useSessionStore } from "../store/useSessionStore";
 import { getHabitTodayProgress } from "../helpers/habitProgress";
 
+
+
 export default function Dashboard() {
   const navigation = useNavigation();
 
@@ -38,6 +40,12 @@ export default function Dashboard() {
     },
     [completeHabit]
   );
+
+  console.log(
+  "Loaded habits:",
+  habits
+);
+
 
   return (
     <ScreenLayout>

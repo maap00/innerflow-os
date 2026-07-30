@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { getLevelData } from "../helpers/level";
 import { getStageAchievement } from "../helpers/milestones";
 import { getLastResetTime } from "../helpers/timeWindow";
+import { getHabits,  createHabit,
+} from "../repositories/habitRepository";
 
 // =========================
 // ⚙️ CONFIG & CONSTANTS
@@ -52,101 +54,204 @@ export const useSessionStore = create((set, get) => ({
   // 🔄 LOAD & MIGRATION
   // =========================
   loadInitialData: async () => {
-    const sessions = await loadData("sessions");
-    const habits = (await loadData("habits")) || [];
-    const streak = await loadData("streak");
-    const points = await loadData("points");
-    const balance = await loadData("balance");
-    const achievements = await loadData("achievements");
+    const sessions =
+    await loadData("sessions");
 
-    const migratedHabits = habits.map((h) => ({
-    validationType: "time",
+  const localHabits =
+    (await loadData("habits")) || [];
 
-    totalDays: 30,
+  const streak =
+    await loadData("streak");
 
-    stage: 1,
+  const points =
+    await loadData("points");
 
-    currentDay: 0,
+  const balance =
+    await loadData("balance");
 
-    stageConfig: {
-      stage1: 30,
-      stage2: 30,
-      stage3: 30,
-    },
+  const achievements =
+    await loadData(
+      "achievements"
+    );
 
-    lastCompletedAt: null,
+  // =========================
+  // CLOUD HABITS
+  // =========================
 
-    // NUEVO
-    category: "mental",
+  let habits = localHabits;
 
-    // Preparado para el futuro
-    skills: ["mental"],
+  try {
+    const cloudHabits =
+      await getHabits();
 
-    // Mantener datos existentes
-    ...h,
+     
 
-    // Si el hábito ya tiene categoría, conservarla
-    category:
-      h.category ??
-      "mental",
+    habits = cloudHabits;
 
-    // Si en el futuro ya existe skills, conservarlo.
-    // Si no, generarlo a partir de category.
-    skills:
-      h.skills ??
-      [
-        h.category ??
-          "mental",
-      ],
-  }));
+    // Cache local
+    await saveData(
+      "habits",
+      cloudHabits
+    );
+  } catch (error) {
+    console.log(
+      "Cloud habits unavailable. Using local cache:",
+      error?.message
+    );
+  }
 
-    set({
-      sessions: migrateSessions(sessions || []),
-      habits: migratedHabits,
-      streak: streak || 0,
-      points: points || 0,
-      balance: balance || 0,
-      achievements: achievements || [],
+  // =========================
+  // MIGRATION
+  // =========================
+
+  const migratedHabits =
+    habits.map((h) => ({
+      validationType: "time",
+
+      totalDays: 30,
+
+      stage: 1,
+
+      currentDay: 0,
+
+      stageConfig: {
+        stage1: 30,
+        stage2: 30,
+        stage3: 30,
+      },
+
+      category: null,
+
+      skills: [],
+
+      milestones: [],
+
+      lastCompletedAt: null,
+
+      streak: 0,
+
+      ...h,
+    }));
+
+  set({
+    sessions:
+      migrateSessions(
+        sessions || []
+      ),
+
+    habits:
+      migratedHabits,
+
+    streak:
+      streak || 0,
+
+    points:
+      points || 0,
+
+    balance:
+      balance || 0,
+
+    achievements:
+      achievements || [],
     });
   },
 
   // =========================
   // 🎯 HABITS
   // =========================
-  addHabit: (name, config) =>
-    set((state) => {
-      const stageConfig = config.stageConfig;
-      const totalDays = stageConfig.stage1;
+  addHabit: async (name, config) => {
+  const stageConfig =
+    config.stageConfig;
 
-      const newHabit = {
-        id: Date.now().toString(),
-        name,
-        validationType: config.validationType,
-        category:
-        config.category,
-        skills: [
-          config.category,
-        ],
-        targetSeconds:
-          config.validationType === "time"
-            ? config.targetMinutes * 60
-            : null,
-        currentDay: 0,
-        stage: 1,
-        totalDays,
-        stageConfig,
-        lastCompletedAt: null,
-        streak: 0,
-        milestones: [],
-      };
+  const totalDays =
+    stageConfig.stage1;
 
-      const updated = [...state.habits, newHabit];
-      saveData("habits", updated);
+  // =========================
+  // BUILD HABIT
+  // =========================
 
-      return {
-        habits: updated,
-      };
-    }),
+  const newHabit = {
+    name,
+
+    validationType:
+      config.validationType,
+
+    category:
+      config.category,
+
+    targetSeconds:
+      config.validationType === "time"
+        ? config.targetMinutes * 60
+        : null,
+
+    currentDay: 0,
+
+    stage: 1,
+
+    totalDays,
+
+    stageConfig,
+
+    lastCompletedAt: null,
+
+    streak: 0,
+
+    milestones: [],
+  };
+
+  try {
+    // =========================
+    // CLOUD CREATE
+    // =========================
+
+    const createdHabit =
+      await createHabit(
+        newHabit
+      );
+
+    // Supabase devuelve el hábito
+    // con su UUID real.
+
+    const updatedHabits = [
+      ...get().habits,
+      createdHabit,
+    ];
+
+    // =========================
+    // LOCAL CACHE
+    // =========================
+
+    await saveData(
+      "habits",
+      updatedHabits
+    );
+
+    // =========================
+    // ZUSTAND
+    // =========================
+
+    set({
+      habits:
+        updatedHabits,
+    });
+
+    return {
+      success: true,
+      habit:
+        createdHabit,
+    };
+  } catch (error) {
+    console.log(
+      "Create habit error:",
+      error
+    );
+
+    return {
+      success: false,
+      error,
+    };
+  }
+},
 
   updateHabit: (
     habitId,

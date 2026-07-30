@@ -58,7 +58,7 @@ export default function CreateHabits() {
   // 🚀 CREATE
   // =========================
 
-  const handleCreateHabit = () => {
+  const handleCreateHabit = async () => {
     // 🚨 VALIDATION
 
     if (!name.trim()) {
@@ -91,9 +91,22 @@ export default function CreateHabits() {
             },
     };
 
-    addHabit(name.trim(), config);
+   const result =
+  await addHabit(
+    name,
+    config
+  );
 
-    navigation.goBack();
+if (!result.success) {
+  console.log(
+    "Could not create habit:",
+    result.error
+  );
+
+  return;
+}
+
+navigation.goBack();
   };
 
   // =========================

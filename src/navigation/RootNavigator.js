@@ -7,7 +7,7 @@ import {
   View,
 } from "react-native";
 
-import AppNavigator from "./AppNavigator";
+import AuthenticatedApp from "./AuthenticatedApp";
 import AuthNavigator from "./AuthNavigator";
 
 import {
@@ -113,8 +113,10 @@ export default function RootNavigator() {
   // NAVIGATION
   // =========================
 
-  return session ? (
-    <AppNavigator />
+ return session ? (
+    <AuthenticatedApp
+      key={session.user.id}
+    />
   ) : (
     <AuthNavigator />
   );
