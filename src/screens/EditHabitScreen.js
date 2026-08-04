@@ -41,7 +41,7 @@ export default function EditHabitScreen() {
 
   if (!habit) {
     return null;
-  }
+}
 
   // =========================
   // FORM STATE
@@ -81,26 +81,47 @@ export default function EditHabitScreen() {
   // SAVE
   // =========================
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      setNameError(true);
-      return;
-    }
+const handleSave = async () => {
+  if (!name.trim()) {
+    setNameError(true);
+    return;
+  }
 
+  const result =
+    await updateHabit(
+      habit.id,
+      {
+        name: name.trim(),
 
+        validationType,
 
-    updateHabit(habit.id, {
-      name,
-      validationType,
-      category,
-      targetMinutes: minutes,
-      stage1: Number(stage1),
-      stage2: Number(stage2),
-      stage3: Number(stage3),
-    });
+        category,
 
-    navigation.goBack();
-  };
+        targetMinutes:
+          Number(minutes),
+
+        stage1:
+          Number(stage1),
+
+        stage2:
+          Number(stage2),
+
+        stage3:
+          Number(stage3),
+      }
+    );
+
+  if (!result.success) {
+    console.log(
+      "Could not update habit:",
+      result.error
+    );
+
+    return;
+  }
+
+  navigation.goBack();
+};
 
   const handleDelete = () => {
   Alert.alert(
@@ -114,11 +135,23 @@ export default function EditHabitScreen() {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => {
-          deleteHabit(habit.id);
+      onPress: () => {
+        navigation.goBack();
 
-          navigation.goBack();
-        },
+        requestAnimationFrame(async () => {
+          const result =
+            await deleteHabit(
+              habit.id
+            );
+
+          if (!result.success) {
+            console.log(
+              "Delete habit error:",
+              result.error
+            );
+          }
+        });
+      },
       },
     ]
   );

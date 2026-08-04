@@ -41,10 +41,7 @@ export default function Dashboard() {
     [completeHabit]
   );
 
-  console.log(
-  "Loaded habits:",
-  habits
-);
+
 
 
   return (

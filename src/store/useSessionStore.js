@@ -4,7 +4,11 @@ import { create } from "zustand";
 import { getLevelData } from "../helpers/level";
 import { getStageAchievement } from "../helpers/milestones";
 import { getLastResetTime } from "../helpers/timeWindow";
-import { getHabits,  createHabit,
+import { getHabits, 
+         createHabit,  
+         updateHabit as updateHabitCloud,
+         deleteHabit as deleteHabitCloud,
+
 } from "../repositories/habitRepository";
 
 // =========================
@@ -253,85 +257,154 @@ export const useSessionStore = create((set, get) => ({
   }
 },
 
-  updateHabit: (
-    habitId,
-    config
-  ) =>
-    set((state) => {
-      const updated =
-        state.habits.map(
-          (habit) => {
-            if (
-              habit.id !==
-              habitId
-            ) {
-              return habit;
-            }
+ updateHabit: async (
+  habitId,
+  updates
+  ) => {
+    const currentHabit =
+      get().habits.find(
+        (habit) =>
+          habit.id === habitId
+      );
 
-            return {
-              ...habit,
+    if (!currentHabit) {
+      return {
+        success: false,
+        error: new Error(
+          "Habit not found"
+        ),
+      };
+    }
 
-              name:
-                config.name,
+    // =========================
+    // BUILD UPDATED HABIT
+    // =========================
 
-              validationType:
-                config.validationType,
+    const updatedHabit = {
+      ...currentHabit,
 
-              category:
-                config.category,
+      ...updates,
 
-              skills: [
-                config.category,
-              ],
+      targetSeconds:
+        updates.validationType === "time"
+          ? updates.targetMinutes * 60
+          : null,
 
-              targetSeconds:
-                config.validationType ===
-                "time"
-                  ? config.targetMinutes *
-                    60
-                  : null,
+      stageConfig: {
+        stage1:
+          updates.stage1,
 
-              stageConfig: {
-                stage1:
-                  config.stage1,
+        stage2:
+          updates.stage2,
 
-                stage2:
-                  config.stage2,
+        stage3:
+          updates.stage3,
+      },
+    };
 
-                stage3:
-                  config.stage3,
-              },
+    try {
+      // =========================
+      // CLOUD
+      // =========================
 
-              totalDays:
-                config.stage1 +
-                config.stage2 +
-                config.stage3,
-            };
-          }
+      const savedHabit =
+        await updateHabitCloud(
+          habitId,
+          updatedHabit
         );
 
-      saveData(
+      // =========================
+      // ZUSTAND
+      // =========================
+
+      const updatedHabits =
+        get().habits.map(
+          (habit) =>
+            habit.id === habitId
+              ? savedHabit
+              : habit
+        );
+
+      set({
+        habits:
+          updatedHabits,
+      });
+
+      // =========================
+      // LOCAL CACHE
+      // =========================
+
+      await saveData(
         "habits",
-        updated
+        updatedHabits
       );
 
       return {
-        habits: updated,
+        success: true,
+        habit: savedHabit,
       };
-    }),
-
-  deleteHabit: (habitId) =>
-    set((state) => {
-      const habits = state.habits.filter(
-        (habit) => habit.id !== habitId
+    } catch (error) {
+      console.log(
+        "Update habit error:",
+        error
       );
 
-      saveData("habits", habits);
-
       return {
-        habits,
+        success: false,
+        error,
       };
-    }),
+    }
+  },
+
+ deleteHabit: async (habitId) => {
+  try {
+    // =========================
+    // CLOUD
+    // =========================
+
+    await deleteHabitCloud(
+      habitId
+    );
+
+    // =========================
+    // ZUSTAND
+    // =========================
+
+    const updatedHabits =
+      get().habits.filter(
+        (habit) =>
+          habit.id !== habitId
+      );
+
+    set({
+      habits:
+        updatedHabits,
+    });
+
+    // =========================
+    // LOCAL CACHE
+    // =========================
+
+    await saveData(
+      "habits",
+      updatedHabits
+    );
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.log(
+      "Delete habit error:",
+      error
+    );
+
+    return {
+      success: false,
+      error,
+    };
+  }
+},
 
   // 👉 ONLY FOR MANUAL HABITS
   completeHabit: (habitId) =>
