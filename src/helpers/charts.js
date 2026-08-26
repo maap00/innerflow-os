@@ -1,3 +1,8 @@
+import {
+  getSessionDuration,
+  getSessionTimestamp,
+} from "./sessions";
+
 export const getLast7DaysFocus = (sessions) => {
   const result = [];
 
@@ -9,11 +14,26 @@ export const getLast7DaysFocus = (sessions) => {
 
     const totalSeconds = sessions
       .filter((s) => {
-        const d = new Date(s.endTime);
+        const d =
+          new Date(
+            getSessionTimestamp(
+              s,
+              "endedAt"
+            )
+          );
 
-        return d.toDateString() === day.toDateString();
+        return (
+          s.isValid !== false &&
+          d.toDateString() ===
+            day.toDateString()
+        );
       })
-      .reduce((acc, s) => acc + s.duration, 0);
+      .reduce(
+        (acc, s) =>
+          acc +
+          getSessionDuration(s),
+        0
+      );
 
     result.push({
       label,

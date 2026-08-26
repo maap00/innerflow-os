@@ -205,3 +205,52 @@ export async function deleteHabit(
 
   return true;
 }
+
+// =========================
+// UPDATE HABIT PROGRESS
+// =========================
+
+export async function updateHabitProgress(
+  habitId,
+  progress
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("habits")
+    .update({
+      current_day:
+        progress.currentDay,
+
+      stage:
+        progress.stage,
+
+      total_days:
+        progress.totalDays,
+
+      streak:
+        progress.streak,
+
+      milestones:
+        progress.milestones,
+
+      last_completed_at:
+        progress.lastCompletedAt
+          ? new Date(
+              progress.lastCompletedAt
+            ).toISOString()
+          : null,
+    })
+    .eq("id", habitId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapHabitFromDB(
+    data
+  );
+}

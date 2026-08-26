@@ -8,8 +8,15 @@ import { getHabits,
          createHabit,  
          updateHabit as updateHabitCloud,
          deleteHabit as deleteHabitCloud,
+         updateHabitProgress,
 
 } from "../repositories/habitRepository";
+
+import {
+  createSession,
+  getSessions,
+  normalizeSession,
+} from "../repositories/sessionRepository";
 
 // =========================
 // ⚙️ CONFIG & CONSTANTS
@@ -30,15 +37,13 @@ const loadData = async (key) => {
 };
 
 const migrateSessions = (sessions = []) => {
-  return sessions.map((s) => ({
-    id: s.id ?? Date.now().toString(),
-    habitId: s.habitId,
-    startedAt: s.startedAt ?? s.startTime ?? Date.now(),
-    endedAt: s.endedAt ?? s.endTime ?? Date.now(),
-    durationSeconds: s.durationSeconds ?? s.duration ?? 0,
-    createdAt: s.createdAt ?? Date.now(),
-    isValid: s.isValid ?? true,
-  }));
+  return sessions
+    .map(normalizeSession)
+    .filter(
+      (session) =>
+        session.id &&
+        session.habitId
+    );
 };
 
 // =========================
@@ -58,8 +63,8 @@ export const useSessionStore = create((set, get) => ({
   // 🔄 LOAD & MIGRATION
   // =========================
   loadInitialData: async () => {
-    const sessions =
-    await loadData("sessions");
+    const localSessions =
+      (await getSessions()) || [];
 
   const localHabits =
     (await loadData("habits")) || [];
@@ -83,6 +88,10 @@ export const useSessionStore = create((set, get) => ({
   // =========================
 
   let habits = localHabits;
+  let sessions =
+    migrateSessions(
+      localSessions
+    );
 
   try {
     const cloudHabits =
@@ -100,6 +109,26 @@ export const useSessionStore = create((set, get) => ({
   } catch (error) {
     console.log(
       "Cloud habits unavailable. Using local cache:",
+      error?.message
+    );
+  }
+
+  try {
+    const cloudSessions =
+      await getSessions();
+
+    sessions =
+      migrateSessions(
+        cloudSessions
+      );
+
+    await saveData(
+      "sessions",
+      sessions
+    );
+  } catch (error) {
+    console.log(
+      "Cloud sessions unavailable. Using local cache:",
       error?.message
     );
   }
@@ -138,10 +167,7 @@ export const useSessionStore = create((set, get) => ({
     }));
 
   set({
-    sessions:
-      migrateSessions(
-        sessions || []
-      ),
+    sessions,
 
     habits:
       migratedHabits,
@@ -407,113 +433,284 @@ export const useSessionStore = create((set, get) => ({
 },
 
   // 👉 ONLY FOR MANUAL HABITS
-  completeHabit: (habitId) =>
-    set((state) => {
-      const now = Date.now();
-      const lastReset = getLastResetTime();
+  completeHabit: async (habitId) => {
+    const state = get();
 
-      const updated = state.habits.map((h) => {
-        if (h.id !== habitId) return h;
+    const now = Date.now();
 
-        if (h.lastCompletedAt && h.lastCompletedAt > lastReset) {
+    const lastReset =
+      getLastResetTime();
+
+    const updated =
+      state.habits.map((h) => {
+        if (h.id !== habitId) {
           return h;
         }
 
-        const newDay = h.currentDay + 1;
-        const achievement = getStageAchievement(newDay);
-        const currentMilestones = h.milestones || [];
+        if (
+          h.lastCompletedAt &&
+          h.lastCompletedAt > lastReset
+        ) {
+          return h;
+        }
+
+        const newDay =
+          h.currentDay + 1;
+
+        const achievement =
+          getStageAchievement(
+            newDay
+          );
+
+        const currentMilestones =
+          h.milestones || [];
 
         const updatedMilestones =
-          achievement && !currentMilestones.includes(achievement.id)
-            ? [...currentMilestones, achievement.id]
+          achievement &&
+          !currentMilestones.includes(
+            achievement.id
+          )
+            ? [
+                ...currentMilestones,
+                achievement.id,
+              ]
             : currentMilestones;
 
-        const s1 = h.stageConfig.stage1;
-        const s2 = h.stageConfig.stage2;
-        const s3 = h.stageConfig.stage3;
+        const s1 =
+          h.stageConfig.stage1;
+
+        const s2 =
+          h.stageConfig.stage2;
+
+        const s3 =
+          h.stageConfig.stage3;
 
         let newStage = 1;
+
         let totalDays = s1;
 
         if (newDay > s1) {
           newStage = 2;
-          totalDays = s1 + s2;
+
+          totalDays =
+            s1 + s2;
         }
 
         if (newDay > s1 + s2) {
           newStage = 3;
-          totalDays = s1 + s2 + s3;
+
+          totalDays =
+            s1 + s2 + s3;
         }
 
         if (achievement) {
-          get().unlockAchievement(achievement);
+          get().unlockAchievement(
+            achievement
+          );
         }
 
         return {
           ...h,
+
           currentDay: newDay,
+
           stage: newStage,
+
           totalDays,
-          milestones: updatedMilestones,
-          lastCompletedAt: now,
+
+          milestones:
+            updatedMilestones,
+
+          lastCompletedAt:
+            now,
         };
       });
 
-      saveData("habits", updated);
-      return { habits: updated };
-    }),
+    const completedHabit =
+      updated.find(
+        (h) =>
+          h.id === habitId
+      );
+
+    try {
+      if (completedHabit) {
+        await updateHabitProgress(
+          habitId,
+          completedHabit
+        );
+      }
+    } catch (error) {
+      console.log(
+        "Progress sync error:",
+        error
+      );
+    }
+
+    await saveData(
+      "habits",
+      updated
+    );
+
+    set({
+      habits: updated,
+    });
+
+    return {
+      success: true,
+    };
+  },
 
   selectHabit: (id) => set({ selectedHabitId: id }),
 
-  addSession: ({ habitId, startedAt, endedAt, durationSeconds }) =>
-    set((state) => {
+ addSession: async ({
+  habitId,
+  startedAt,
+  endedAt,
+  durationSeconds,
+  isValid = true,
+    }) => {
       const newSession = {
-        id: Date.now().toString(),
         habitId,
         startedAt,
         endedAt,
         durationSeconds,
-        createdAt: Date.now(),
-        isValid: true,
+        createdAt:
+          endedAt ?? Date.now(),
+        isValid,
       };
 
-      const updatedSessions = [...state.sessions, newSession];
-      saveData("sessions", updatedSessions);
+      try {
+        // =========================
+        // SUPABASE
+        // =========================
 
-      return {
-        sessions: updatedSessions,
-      };
-    }),
+        const cloudSession =
+          await createSession(
+            newSession
+          );
 
-  checkHabitCompletion: (habitId) => {
+        // =========================
+        // LOCAL STATE
+        // =========================
+
+        const state = get();
+
+        const updatedSessions = [
+          ...state.sessions,
+          cloudSession,
+        ];
+
+        await saveData(
+          "sessions",
+          updatedSessions
+        );
+
+        set({
+          sessions:
+            updatedSessions,
+        });
+
+        return {
+          success: true,
+          session:
+            cloudSession,
+        };
+      } catch (error) {
+        console.log(
+          "Create session error:",
+          error
+        );
+
+        const fallbackSession =
+          normalizeSession(
+            newSession
+          );
+
+        const updatedSessions = [
+          ...get().sessions,
+          fallbackSession,
+        ];
+
+        await saveData(
+          "sessions",
+          updatedSessions
+        );
+
+        set({
+          sessions:
+            updatedSessions,
+        });
+
+        return {
+          success: false,
+          error,
+          session:
+            fallbackSession,
+        };
+      }
+    },
+
+  checkHabitCompletion: async (habitId) => {
     const state = get();
-    const habit = state.habits.find((h) => h.id === habitId);
 
-    if (!habit || habit.validationType !== "time") {
+    const habit =
+      state.habits.find(
+        (h) => h.id === habitId
+      );
+
+    if (
+      !habit ||
+      habit.validationType !== "time"
+    ) {
       return;
     }
 
-    const lastReset = getLastResetTime();
+    const lastReset =
+      getLastResetTime();
+
     const completedToday =
-      habit.lastCompletedAt && habit.lastCompletedAt > lastReset;
+      habit.lastCompletedAt &&
+      habit.lastCompletedAt >
+        lastReset;
 
     if (completedToday) {
       return;
     }
 
-    const today = new Date();
-    const todaySeconds = state.sessions
-      .filter((s) => {
-        const date = new Date(s.createdAt);
-        return (
-          s.habitId === habitId &&
-          date.toDateString() === today.toDateString()
-        );
-      })
-      .reduce((sum, s) => sum + s.durationSeconds, 0);
+    const today =
+      new Date();
 
-    if (todaySeconds >= habit.targetSeconds) {
-      state.completeHabit(habitId);
+    const todaySeconds =
+      state.sessions
+        .filter((session) => {
+          const date =
+            new Date(
+              session.createdAt
+            );
+
+          return (
+            session.habitId ===
+              habitId &&
+            session.isValid !==
+              false &&
+            date.toDateString() ===
+              today.toDateString()
+          );
+        })
+        .reduce(
+          (sum, session) =>
+            sum +
+            session.durationSeconds,
+          0
+        );
+
+    if (
+      todaySeconds >=
+      habit.targetSeconds
+    ) {
+      await state.completeHabit(
+        habitId
+      );
     }
   },
 
@@ -572,49 +769,92 @@ export const useSessionStore = create((set, get) => ({
   // =========================
   // 🛑 STOP SESSION
   // =========================
-  stopSession: () =>
-    set((state) => {
-      const session = state.currentSession;
-      if (!session) {
-        return {};
-      }
+  stopSession: async () => {
+    const state = get();
+    const session =
+      state.currentSession;
 
-      const duration = session.duration;
-      const target = session.targetSeconds;
-
-      const isValid =
-        duration >= MIN_VALID_SECONDS &&
-        (!target || duration / target >= MIN_PROGRESS_RATIO);
-
-      const newSession = {
-        id: Date.now().toString(),
-        habitId: session.habitId,
-        startedAt: session.startTime,
-        endedAt: Date.now(),
-        durationSeconds: duration,
-        createdAt: Date.now(),
-        isValid,
-      };
-
-      const updatedSessions = [...state.sessions, newSession];
-      const earnedPoints = isValid ? Math.floor(duration / 60) : 0;
-      const newPoints = state.points + earnedPoints;
-      const newBalance = state.balance + earnedPoints;
-
-      // Batch storage saves
-      Promise.all([
-        saveData("sessions", updatedSessions),
-        saveData("points", newPoints),
-        saveData("balance", newBalance),
-      ]).catch((err) => console.error("Failed to save session data:", err));
-
+    if (!session) {
       return {
-        sessions: updatedSessions,
-        currentSession: null,
-        points: newPoints,
-        balance: newBalance,
+        success: false,
+        error: new Error(
+          "No active session"
+        ),
       };
-    }),
+    }
+
+    const duration =
+      session.duration;
+
+    const target =
+      session.targetSeconds;
+
+    const isValid =
+      duration >= MIN_VALID_SECONDS &&
+      (!target ||
+        duration / target >=
+          MIN_PROGRESS_RATIO);
+
+    const endedAt = Date.now();
+
+    const result =
+      await get().addSession({
+        habitId:
+          session.habitId,
+        startedAt:
+          session.startTime,
+        endedAt,
+        durationSeconds:
+          duration,
+        isValid,
+      });
+
+    const earnedPoints =
+      isValid
+        ? Math.floor(
+            duration / 60
+          )
+        : 0;
+
+    const newPoints =
+      state.points +
+      earnedPoints;
+
+    const newBalance =
+      state.balance +
+      earnedPoints;
+
+    await Promise.all([
+      saveData(
+        "points",
+        newPoints
+      ),
+      saveData(
+        "balance",
+        newBalance
+      ),
+    ]).catch((err) =>
+      console.error(
+        "Failed to save session data:",
+        err
+      )
+    );
+
+    set({
+      currentSession: null,
+      points: newPoints,
+      balance: newBalance,
+    });
+
+    if (isValid) {
+      await get()
+        .checkHabitCompletion(
+          session.habitId
+        );
+    }
+
+    return result;
+  },
 
   // =========================
   // 🏆 LEVEL

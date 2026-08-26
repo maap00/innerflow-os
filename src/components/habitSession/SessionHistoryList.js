@@ -40,9 +40,12 @@ export default function SessionHistoryList({
 
       {sessions
         .slice(0, 10)
-        .map((session) => (
+        .map((session, index) => (
           <SessionHistoryItem
-            key={session.id}
+            key={
+              session.id ??
+              `${session.habitId}-${session.createdAt}-${index}`
+            }
             session={session}
           />
         ))}

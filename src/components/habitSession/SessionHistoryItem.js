@@ -2,6 +2,10 @@ import { View, Text } from "react-native";
 import Card from "../ui/Card";
 import { colors } from "../../theme/colors";
 import { formatTime } from "../../helpers/time";
+import {
+  getSessionDuration,
+  getSessionTimestamp,
+} from "../../helpers/sessions";
 
 export default function SessionHistoryItem({
   session,
@@ -19,7 +23,10 @@ export default function SessionHistoryItem({
         }}
       >
         {new Date(
-          session.createdAt
+          getSessionTimestamp(
+            session,
+            "createdAt"
+          )
         ).toLocaleDateString()}
       </Text>
 
@@ -31,7 +38,9 @@ export default function SessionHistoryItem({
         }}
       >
         {formatTime(
-          session.durationSeconds
+          getSessionDuration(
+            session
+          )
         )}
       </Text>
     </Card>

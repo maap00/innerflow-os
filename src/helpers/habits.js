@@ -1,11 +1,28 @@
+import {
+  getSessionDuration,
+  getSessionTimestamp,
+} from "./sessions";
+
 export const getTodayProgress = (sessions) => {
   const today = new Date().toDateString();
 
   return sessions
     .filter(
-      (s) => new Date(s.endTime).toDateString() === today
+      (s) =>
+        s.isValid !== false &&
+        new Date(
+          getSessionTimestamp(
+            s,
+            "endedAt"
+          )
+        ).toDateString() === today
     )
-    .reduce((acc, s) => acc + s.duration, 0);
+    .reduce(
+      (acc, s) =>
+        acc +
+        getSessionDuration(s),
+      0
+    );
 };
 
 export const getHabitProgress = (
@@ -34,7 +51,10 @@ export const getHabitProgress = (
           s.habitId ===
             habit.id &&
           new Date(
-            s.createdAt
+            getSessionTimestamp(
+              s,
+              "createdAt"
+            )
           ).toDateString() ===
             today &&
           s.isValid
@@ -42,7 +62,7 @@ export const getHabitProgress = (
       .reduce(
         (sum, s) =>
           sum +
-          s.durationSeconds,
+          getSessionDuration(s),
         0
       );
 

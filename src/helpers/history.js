@@ -1,8 +1,18 @@
+import {
+  getSessionTimestamp,
+} from "./sessions";
+
 export const groupSessionsByDay = (sessions) => {
   const grouped = {};
 
   sessions.forEach((s) => {
-    const date = new Date(s.endTime).toDateString();
+    const date =
+      new Date(
+        getSessionTimestamp(
+          s,
+          "endedAt"
+        )
+      ).toDateString();
 
     if (!grouped[date]) {
       grouped[date] = [];
@@ -15,7 +25,17 @@ export const groupSessionsByDay = (sessions) => {
 };
 
 export const sortSessionsDesc = (sessions) => {
-  return [...sessions].sort((a, b) => b.endTime - a.endTime);
+  return [...sessions].sort(
+    (a, b) =>
+      getSessionTimestamp(
+        b,
+        "endedAt"
+      ) -
+      getSessionTimestamp(
+        a,
+        "endedAt"
+      )
+  );
 };
 
 export const formatDate = (date) => {
@@ -35,7 +55,10 @@ export function groupSessions(
     (session) => {
       const date =
         new Date(
-          session.createdAt
+          getSessionTimestamp(
+            session,
+            "createdAt"
+          )
         );
 
       const key =
@@ -77,7 +100,10 @@ export function groupSessionsByDate(
     (session) => {
       const date =
         new Date(
-          session.createdAt
+          getSessionTimestamp(
+            session,
+            "createdAt"
+          )
         );
 
       if (

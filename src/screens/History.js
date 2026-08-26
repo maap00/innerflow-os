@@ -6,6 +6,10 @@ import HistoryItem from "../components/history/HistoryItem";
 import HistorySection from "../components/history/HistorySection";
 import ScreenLayout from "../components/layout/ScreenLayout";
 import { groupSessionsByDate } from "../helpers/history";
+import {
+  getSessionDuration,
+  getSessionTimestamp,
+} from "../helpers/sessions";
 import { formatTime } from "../helpers/time";
 import { useSessionStore } from "../store/useSessionStore";
 
@@ -35,12 +39,24 @@ export default function History() {
     return sessionsList
       .slice()
       .reverse()
-      .map((session) => (
+      .map((session, index) => (
         <HistoryItem
-          key={session.id}
+          key={
+            session.id ??
+            `${session.habitId}-${session.createdAt}-${index}`
+          }
           title={habitNameMap[session.habitId] || "Habit"}
-          duration={formatTime(session.durationSeconds)}
-          date={new Date(session.createdAt).toLocaleString()}
+          duration={formatTime(
+            getSessionDuration(
+              session
+            )
+          )}
+          date={new Date(
+            getSessionTimestamp(
+              session,
+              "createdAt"
+            )
+          ).toLocaleString()}
         />
       ));
   };

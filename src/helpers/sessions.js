@@ -1,3 +1,50 @@
+export function getSessionTimestamp(
+  session,
+  field = "createdAt"
+) {
+  const value =
+    session?.[field] ??
+    (field === "createdAt"
+      ? session?.created_at
+        ?? session?.endedAt
+        ?? session?.endTime
+        ?? session?.ended_at
+      : null) ??
+    (field === "endedAt"
+      ? session?.endTime ??
+        session?.ended_at
+      : null) ??
+    (field === "startedAt"
+      ? session?.startTime ??
+        session?.started_at
+      : null);
+
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+  const timestamp =
+    new Date(value).getTime();
+
+  return Number.isFinite(timestamp)
+    ? timestamp
+    : Date.now();
+}
+
+export function getSessionDuration(
+  session
+) {
+  return (
+    session?.durationSeconds ??
+    session?.duration ??
+    session?.duration_seconds ??
+    0
+  );
+}
+
 export function getTodayHabitProgress(
   sessions,
   habitId
@@ -9,12 +56,16 @@ export function getTodayHabitProgress(
     .filter((s) => {
       const date =
         new Date(
-          s.createdAt
+          getSessionTimestamp(
+            s,
+            "createdAt"
+          )
         );
 
       return (
         s.habitId ===
           habitId &&
+        s.isValid !== false &&
         date.toDateString() ===
           today.toDateString()
       );
@@ -22,7 +73,7 @@ export function getTodayHabitProgress(
     .reduce(
       (sum, s) =>
         sum +
-        s.durationSeconds,
+        getSessionDuration(s),
       0
     );
 }
@@ -35,12 +86,13 @@ export function getHabitLifetimeTotal(
     .filter(
       (s) =>
         s.habitId ===
-        habitId
+        habitId &&
+        s.isValid !== false
     )
     .reduce(
       (sum, s) =>
         sum +
-        s.durationSeconds,
+        getSessionDuration(s),
       0
     );
 }
@@ -57,7 +109,13 @@ export function getHabitHistory(
     )
     .sort(
       (a, b) =>
-        b.createdAt -
-        a.createdAt
+        getSessionTimestamp(
+          b,
+          "createdAt"
+        ) -
+        getSessionTimestamp(
+          a,
+          "createdAt"
+        )
     );
 }

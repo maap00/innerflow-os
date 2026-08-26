@@ -1,19 +1,42 @@
+import {
+  getSessionDuration,
+  getSessionTimestamp,
+} from "./sessions";
+
 export const getBestFocusHour = (sessions) => {
   if (!sessions.length) return null;
 
   const buckets = {};
 
   sessions.forEach((s) => {
-    const hour = new Date(s.endTime).getHours();
+    if (s.isValid === false) {
+      return;
+    }
+
+    const hour =
+      new Date(
+        getSessionTimestamp(
+          s,
+          "endedAt"
+        )
+      ).getHours();
 
     if (!buckets[hour]) {
       buckets[hour] = 0;
     }
 
-    buckets[hour] += s.duration;
+    buckets[hour] +=
+      getSessionDuration(s);
   });
 
-  const bestHour = Object.entries(buckets).sort(
+  const entries =
+    Object.entries(buckets);
+
+  if (!entries.length) {
+    return null;
+  }
+
+  const bestHour = entries.sort(
     (a, b) => b[1] - a[1]
   )[0][0];
 
@@ -26,16 +49,34 @@ export const getBestWeekday = (sessions) => {
   const buckets = {};
 
   sessions.forEach((s) => {
-    const day = new Date(s.endTime).getDay();
+    if (s.isValid === false) {
+      return;
+    }
+
+    const day =
+      new Date(
+        getSessionTimestamp(
+          s,
+          "endedAt"
+        )
+      ).getDay();
 
     if (!buckets[day]) {
       buckets[day] = 0;
     }
 
-    buckets[day] += s.duration;
+    buckets[day] +=
+      getSessionDuration(s);
   });
 
-  const best = Object.entries(buckets).sort(
+  const entries =
+    Object.entries(buckets);
+
+  if (!entries.length) {
+    return null;
+  }
+
+  const best = entries.sort(
     (a, b) => b[1] - a[1]
   )[0][0];
 
@@ -58,14 +99,29 @@ export const getAverageDailyMinutes = (sessions) => {
   const grouped = {};
 
   sessions.forEach((s) => {
-    const day = new Date(s.endTime).toDateString();
+    if (s.isValid === false) {
+      return;
+    }
+
+    const day =
+      new Date(
+        getSessionTimestamp(
+          s,
+          "endedAt"
+        )
+      ).toDateString();
 
     if (!grouped[day]) grouped[day] = 0;
 
-    grouped[day] += s.duration;
+    grouped[day] +=
+      getSessionDuration(s);
   });
 
   const totals = Object.values(grouped);
+
+  if (!totals.length) {
+    return 0;
+  }
 
   const avgSeconds =
     totals.reduce((a, b) => a + b, 0) /
