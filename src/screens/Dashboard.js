@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -12,8 +12,11 @@ import { getHabitTodayProgress } from "../helpers/habitProgress";
 
 
 
+
 export default function Dashboard() {
   const navigation = useNavigation();
+
+ 
 
   // Zustand Selectors (Optimized to prevent unnecessary re-renders)
   const habits = useSessionStore((state) => state.habits);
@@ -49,6 +52,8 @@ export default function Dashboard() {
       <DashboardHero />
 
       <Text style={styles.title}>Today Tasks</Text>
+
+      
 
       {habits.map((habit) => {
        const {

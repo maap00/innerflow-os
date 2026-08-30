@@ -18,6 +18,11 @@ import {
   normalizeSession,
 } from "../repositories/sessionRepository";
 
+import {
+  getAchievements,
+  unlockAchievement as unlockAchievementCloud,
+} from "../repositories/achievementRepository";
+
 // =========================
 // ⚙️ CONFIG & CONSTANTS
 // =========================
@@ -78,10 +83,27 @@ export const useSessionStore = create((set, get) => ({
   const balance =
     await loadData("balance");
 
-  const achievements =
-    await loadData(
-      "achievements"
+  let achievements = [];
+
+  try {
+    achievements =
+      await getAchievements();
+
+    await saveData(
+      "achievements",
+      achievements
     );
+  } catch (error) {
+    console.log(
+      "Cloud achievements unavailable. Using local cache:",
+      error?.message
+    );
+
+    achievements =
+      (await loadData(
+        "achievements"
+      )) || [];
+  }
 
   // =========================
   // CLOUD HABITS
@@ -167,7 +189,10 @@ export const useSessionStore = create((set, get) => ({
     }));
 
   set({
-    sessions,
+    sessions:
+    migrateSessions(
+      sessions || []
+    ),
 
     habits:
       migratedHabits,
@@ -504,7 +529,7 @@ export const useSessionStore = create((set, get) => ({
         }
 
         if (achievement) {
-          get().unlockAchievement(
+           get().unlockAchievement(
             achievement
           );
         }
@@ -882,28 +907,74 @@ export const useSessionStore = create((set, get) => ({
   // =========================
   // 🏆 ACHIEVEMENTS
   // =========================
-  unlockAchievement: (achievement) =>
-    set((state) => {
-      const alreadyUnlocked = state.achievements.some(
+  unlockAchievement: async (achievement) => {
+    const state = get();
+
+    const alreadyUnlocked =
+      state.achievements.some(
         (a) => a.id === achievement.id
       );
 
-      if (alreadyUnlocked) {
-        return {};
-      }
+    if (alreadyUnlocked) {
+      return {
+        success: true,
+        alreadyUnlocked: true,
+      };
+    }
+
+    const unlockedAchievement = {
+      ...achievement,
+      unlockedAt: Date.now(),
+    };
+
+    try {
+      // =========================
+      // SUPABASE
+      // =========================
+
+      const cloudAchievement =
+        await unlockAchievementCloud(
+          unlockedAchievement
+        );
+
+      // =========================
+      // LOCAL STATE
+      // =========================
 
       const updatedAchievements = [
         ...state.achievements,
         {
-          ...achievement,
-          unlockedAt: Date.now(),
+          ...unlockedAchievement,
+          unlockedAt:
+            cloudAchievement.unlockedAt,
         },
       ];
 
-      saveData("achievements", updatedAchievements);
+      await saveData(
+        "achievements",
+        updatedAchievements
+      );
+
+      set({
+        achievements:
+          updatedAchievements,
+      });
 
       return {
-        achievements: updatedAchievements,
+        success: true,
+        achievement:
+          cloudAchievement,
       };
-    }),
+    } catch (error) {
+      console.log(
+        "Achievement sync error:",
+        error
+      );
+
+      return {
+        success: false,
+        error,
+      };
+    }
+  },
 }));
